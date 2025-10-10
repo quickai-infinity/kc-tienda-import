@@ -1,15 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Search, User, Menu, X, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useCart } from "@/contexts/CartContext";
+import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo.png";
 
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { theme, setTheme } = useTheme();
   const { totalItems } = useCart();
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: hasAdminRole } = await supabase.rpc("has_role", {
+          _user_id: user.id,
+          _role: "admin",
+        });
+        setIsAdmin(hasAdminRole || false);
+      }
+    };
+    
+    checkAdminStatus();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      checkAdminStatus();
+    });
+    
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <>
@@ -40,9 +63,11 @@ export const Navbar = () => {
             <Link to="/blog" className="text-sm font-medium hover:text-accent transition-colors">
               Blog
             </Link>
-            <Link to="/admin" className="text-sm font-medium hover:text-accent transition-colors">
-              Admin
-            </Link>
+            {isAdmin && (
+              <Link to="/admin" className="text-sm font-medium hover:text-accent transition-colors">
+                Admin
+              </Link>
+            )}
           </div>
 
           {/* Actions */}
@@ -114,13 +139,15 @@ export const Navbar = () => {
               >
                 Blog
               </Link>
-              <Link
-                to="/admin"
-                className="block py-2 text-sm font-medium hover:text-accent transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Admin
-              </Link>
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className="block py-2 text-sm font-medium hover:text-accent transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Admin
+                </Link>
+              )}
               <div className="pt-4 border-t flex items-center space-x-4">
                 <Button
                   variant="ghost"

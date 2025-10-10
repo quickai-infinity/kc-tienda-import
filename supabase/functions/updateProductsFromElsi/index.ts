@@ -22,6 +22,18 @@ interface ProductUpdateStats {
   skipped: number;
 }
 
+function sanitizeError(error: Error): string {
+  const message = error.message.toLowerCase();
+  
+  if (message.includes('insert') || message.includes('update') || message.includes('database')) {
+    return 'Failed to update product database';
+  }
+  if (message.includes('catalog') || message.includes('fetch')) {
+    return 'Failed to fetch catalog data';
+  }
+  return 'An error occurred during product sync';
+}
+
 async function logOperation(
   supabase: any,
   operation: string,
@@ -52,10 +64,40 @@ Deno.serve(async (req) => {
   try {
     console.log('updateProductsFromElsi function invoked');
     
-    // Initialize Supabase client with service role key for admin access
+    // Verify JWT and check admin role
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { data: isAdmin } = await supabase.rpc('has_role', { 
+      _user_id: user.id, 
+      _role: 'admin' 
+    });
+    
+    if (!isAdmin) {
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Fetch all items from elsi_catalog_temp
     console.log('Fetching catalog items from elsi_catalog_temp...');
@@ -65,8 +107,8 @@ Deno.serve(async (req) => {
 
     if (fetchError) {
       console.error('Error fetching catalog items:', fetchError);
-      await logOperation(supabase, 'update_products', 'error', `Failed to fetch catalog: ${fetchError.message}`, 0);
-      throw fetchError;
+      await logOperation(supabase, 'update_products', 'error', 'Failed to fetch catalog', 0);
+      throw new Error('Database operation failed');
     }
 
     if (!catalogItems || catalogItems.length === 0) {
@@ -108,13 +150,6 @@ Deno.serve(async (req) => {
         if (checkError) {
           console.error(`Error checking product ${item.part_number}:`, checkError);
           stats.errors++;
-          await logOperation(
-            supabase,
-            'update_products',
-            'error',
-            `Error checking product ${item.part_number}: ${checkError.message}`,
-            0
-          );
           continue;
         }
 
@@ -155,13 +190,6 @@ Deno.serve(async (req) => {
           if (updateError) {
             console.error(`Error updating product ${item.part_number}:`, updateError);
             stats.errors++;
-            await logOperation(
-              supabase,
-              'update_products',
-              'error',
-              `Error updating product ${item.part_number}: ${updateError.message}`,
-              0
-            );
           } else {
             console.log(`Updated product: ${item.part_number}`);
             stats.updated++;
@@ -175,13 +203,6 @@ Deno.serve(async (req) => {
           if (insertError) {
             console.error(`Error creating product ${item.part_number}:`, insertError);
             stats.errors++;
-            await logOperation(
-              supabase,
-              'update_products',
-              'error',
-              `Error creating product ${item.part_number}: ${insertError.message}`,
-              0
-            );
           } else {
             console.log(`Created new product: ${item.part_number}`);
             stats.created++;
@@ -219,6 +240,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in updateProductsFromElsi:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const userMessage = error instanceof Error ? sanitizeError(error) : 'An error occurred';
     
     // Try to log the error
     try {
@@ -231,7 +253,10 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ 
+        error: userMessage,
+        error_id: crypto.randomUUID()
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }

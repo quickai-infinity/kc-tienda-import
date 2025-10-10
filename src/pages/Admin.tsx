@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RefreshCw, Database, Package, Clock, CheckCircle, XCircle } from "lucide-react";
+import { RefreshCw, Database, Package, Clock, CheckCircle, XCircle, Loader2, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import type { User } from "@supabase/supabase-js";
 
 interface SyncLog {
   operation: string;
@@ -16,9 +18,62 @@ interface SyncLog {
 }
 
 export default function Admin() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<SyncLog[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (!currentUser) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to access the admin panel",
+          variant: "destructive",
+        });
+        navigate("/auth");
+        return;
+      }
+      
+      const { data: hasAdminRole, error } = await supabase.rpc("has_role", {
+        _user_id: currentUser.id,
+        _role: "admin",
+      });
+      
+      if (error) {
+        console.error("Error checking admin role:", error);
+        toast({
+          title: "Permission Error",
+          description: "Error verifying permissions",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
+      
+      if (!hasAdminRole) {
+        toast({
+          title: "Access Denied",
+          description: "Admin privileges required",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
+      
+      setUser(currentUser);
+      setIsAdmin(true);
+      setAuthLoading(false);
+      fetchLogs();
+    };
+    
+    checkAuth();
+  }, [navigate, toast]);
 
   const fetchLogs = async () => {
     const { data, error } = await supabase
@@ -91,16 +146,26 @@ export default function Admin() {
     }
   };
 
-  // Load logs on mount
-  useState(() => {
-    fetchLogs();
-  });
-
   const getStatusIcon = (status: string) => {
     if (status === 'success') return <CheckCircle className="h-4 w-4 text-green-500" />;
     if (status === 'error') return <XCircle className="h-4 w-4 text-red-500" />;
     return <Clock className="h-4 w-4 text-yellow-500" />;
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Verifying permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -110,8 +175,15 @@ export default function Admin() {
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Header */}
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Manage ELSI catalog synchronization</p>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Shield className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold">Admin Dashboard</h1>
+                <p className="text-muted-foreground">Manage ELSI catalog synchronization</p>
+              </div>
+            </div>
           </div>
 
           {/* Sync Control Card */}
