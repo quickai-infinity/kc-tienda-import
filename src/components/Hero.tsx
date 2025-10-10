@@ -31,14 +31,9 @@ export const Hero = () => {
           </div>
 
           {/* Main Title */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-slide-up">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-10 max-w-3xl mx-auto leading-relaxed bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-slide-up">
             {t("hero.title")}
           </h1>
-
-          {/* Subtitle */}
-          <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed animate-slide-up" style={{ animationDelay: "0.1s" }}>
-            {t("hero.subtitle")}
-          </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-slide-up" style={{ animationDelay: "0.2s" }}>

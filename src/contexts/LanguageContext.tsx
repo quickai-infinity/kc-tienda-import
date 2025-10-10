@@ -22,10 +22,11 @@ const translations = {
     "nav.myAccount": "Mi cuenta",
     
     // Hero
-    "hero.title": "Alta tecnología & Diseño elegante",
-    "hero.subtitle": "Encuentra desde equipos de oficina hasta electrónica avanzada, accesorios y software profesional. Todo lo que necesitas para tu negocio o tu día a día tecnológico.",
+    "hero.title": "Encuentra desde equipos de oficina hasta electrónica avanzada, accesorios y software profesional.",
+    "hero.subtitle": "",
     "hero.shopNow": "Comprar ahora",
     "hero.exploreProducts": "Explorar productos",
+    "hero.announcement": "Envíos gratis en pedidos superiores a 50 €. Nuevos productos cada semana.",
     
     // Footer
     "footer.quickLinks": "Enlaces rápidos",
@@ -80,10 +81,11 @@ const translations = {
     "nav.myAccount": "My Account",
     
     // Hero
-    "hero.title": "High Technology & Elegant Design",
-    "hero.subtitle": "Find everything from office equipment to advanced electronics, accessories and professional software. Everything you need for your business or your daily tech life.",
+    "hero.title": "Find everything from office equipment to advanced electronics, accessories and professional software.",
+    "hero.subtitle": "",
     "hero.shopNow": "Shop Now",
     "hero.exploreProducts": "Explore Products",
+    "hero.announcement": "Free shipping on orders over €50. New arrivals weekly.",
     
     // Footer
     "footer.quickLinks": "Quick Links",

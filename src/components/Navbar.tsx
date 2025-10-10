@@ -91,7 +91,7 @@ export const Navbar = () => {
     <>
       {/* Announcement Bar */}
       <div className="bg-primary text-primary-foreground py-2 px-4 text-center text-sm">
-        <p className="animate-fade-in">Free shipping on orders over $99 • New arrivals weekly</p>
+        <p className="animate-fade-in">{t("hero.announcement")}</p>
       </div>
 
       {/* Main Navigation */}
