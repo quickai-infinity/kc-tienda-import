@@ -1,38 +1,89 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { ShoppingCart, Search, User, Menu, X, Moon, Sun } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ShoppingCart, Search, User, Menu, X, Moon, Sun, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useTheme } from "next-themes";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import logo from "@/assets/logo.png";
 
 export const Navbar = () => {
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const { theme, setTheme } = useTheme();
   const { totalItems } = useCart();
+  const { toast } = useToast();
 
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+    const checkAuthStatus = async () => {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      setUser(currentUser);
+      
+      if (currentUser) {
         const { data: hasAdminRole } = await supabase.rpc("has_role", {
-          _user_id: user.id,
+          _user_id: currentUser.id,
           _role: "admin",
         });
         setIsAdmin(hasAdminRole || false);
+      } else {
+        setIsAdmin(false);
       }
     };
     
-    checkAdminStatus();
+    checkAuthStatus();
     
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      checkAdminStatus();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        setTimeout(async () => {
+          const { data: hasAdminRole } = await supabase.rpc("has_role", {
+            _user_id: session.user.id,
+            _role: "admin",
+          });
+          setIsAdmin(hasAdminRole || false);
+        }, 0);
+      } else {
+        setIsAdmin(false);
+      }
     });
     
     return () => subscription.unsubscribe();
   }, []);
+
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      toast({
+        title: "Signed Out",
+        description: "You've been successfully signed out.",
+      });
+      
+      setUser(null);
+      setIsAdmin(false);
+      navigate("/");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <>
@@ -86,9 +137,42 @@ export const Navbar = () => {
             <Button variant="ghost" size="icon" className="hidden md:flex">
               <Search className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="hidden md:flex">
-              <User className="h-5 w-5" />
-            </Button>
+            
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hidden md:flex">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col">
+                      <span className="font-medium">My Account</span>
+                      <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                        {user.email}
+                      </span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate("/admin")}>
+                      Admin Dashboard
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth">
+                <Button variant="ghost" size="icon" className="hidden md:flex">
+                  <User className="h-5 w-5" />
+                </Button>
+              </Link>
+            )}
             <Link to="/cart">
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingCart className="h-5 w-5" />
@@ -158,20 +242,44 @@ export const Navbar = () => {
                   Admin
                 </Link>
               )}
-              <div className="pt-4 border-t flex items-center space-x-4">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                >
-                  {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Search className="h-5 w-5" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
-                </Button>
+              <div className="pt-4 border-t space-y-4">
+                <div className="flex items-center space-x-4">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  >
+                    {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                  </Button>
+                  <Button variant="ghost" size="icon">
+                    <Search className="h-5 w-5" />
+                  </Button>
+                  {user ? (
+                    <Button variant="ghost" size="icon" onClick={() => navigate("/auth")}>
+                      <User className="h-5 w-5" />
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" size="icon" onClick={() => navigate("/auth")}>
+                      <User className="h-5 w-5" />
+                    </Button>
+                  )}
+                </div>
+                {user && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground px-4 truncate">
+                      {user.email}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start text-red-600"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,186 +6,379 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
-import { Shield } from "lucide-react";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Lock } from "lucide-react";
 import { z } from "zod";
 
-const passwordSchema = z.string()
-  .min(8, "Password must be at least 8 characters")
-  .regex(/[A-Z]/, "Password must contain an uppercase letter")
-  .regex(/[a-z]/, "Password must contain a lowercase letter")
-  .regex(/[0-9]/, "Password must contain a number")
-  .regex(/[^A-Za-z0-9]/, "Password must contain a special character");
+const emailSchema = z.string().email("Invalid email address");
+const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const Auth = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  
+  // Login state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  
+  // Register state
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email || !password) {
-      toast.error("Please fill in all fields");
-      return;
-    }
-
-    const passwordValidation = passwordSchema.safeParse(password);
-    if (!passwordValidation.success) {
-      toast.error(passwordValidation.error.errors[0].message);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-        },
-      });
-
-      if (error) {
-        if (error.message.includes("already registered")) {
-          toast.error("This email is already registered. Please sign in.");
+  useEffect(() => {
+    // Check if user is already logged in
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        // Check if user has admin role
+        const { data: hasAdminRole } = await supabase.rpc("has_role", {
+          _user_id: session.user.id,
+          _role: "admin",
+        });
+        
+        if (hasAdminRole) {
+          navigate("/admin");
         } else {
-          toast.error(error.message);
+          navigate("/");
         }
-      } else {
-        toast.success("Account created! You can now sign in.");
-        setEmail("");
-        setPassword("");
       }
-    } catch (error) {
-      toast.error("An error occurred during sign up");
-    } finally {
-      setLoading(false);
-    }
-  };
+      
+      setAuthLoading(false);
+    };
 
-  const handleSignIn = async (e: React.FormEvent) => {
+    checkAuth();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        // Defer the admin check to avoid blocking the auth callback
+        setTimeout(async () => {
+          const { data: hasAdminRole } = await supabase.rpc("has_role", {
+            _user_id: session.user.id,
+            _role: "admin",
+          });
+          
+          if (hasAdminRole) {
+            navigate("/admin");
+          } else {
+            navigate("/");
+          }
+        }, 0);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
-      toast.error("Please fill in all fields");
-      return;
+    // Validate inputs
+    try {
+      emailSchema.parse(loginEmail);
+      passwordSchema.parse(loginPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setLoading(true);
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
       });
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
-          toast.error("Invalid email or password");
+          toast({
+            title: "Login Failed",
+            description: "Invalid email or password. Please try again.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes("Email not confirmed")) {
+          toast({
+            title: "Email Not Confirmed",
+            description: "Please check your email and confirm your account.",
+            variant: "destructive",
+          });
         } else {
-          toast.error(error.message);
+          toast({
+            title: "Login Failed",
+            description: error.message,
+            variant: "destructive",
+          });
         }
-      } else {
-        toast.success("Signed in successfully!");
-        navigate("/");
+        return;
       }
-    } catch (error) {
-      toast.error("An error occurred during sign in");
+
+      if (data.user) {
+        toast({
+          title: "Welcome back!",
+          description: "You've successfully logged in.",
+        });
+        // Navigation will be handled by onAuthStateChange
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate inputs
+    try {
+      emailSchema.parse(registerEmail);
+      passwordSchema.parse(registerPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    if (registerPassword !== registerConfirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "Passwords do not match. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const redirectUrl = `${window.location.origin}/auth`;
+      
+      const { data, error } = await supabase.auth.signUp({
+        email: registerEmail,
+        password: registerPassword,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      });
+
+      if (error) {
+        if (error.message.includes("already registered")) {
+          toast({
+            title: "Registration Failed",
+            description: "This email is already registered. Please log in instead.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes("Password should be")) {
+          toast({
+            title: "Weak Password",
+            description: "Please choose a stronger password.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Registration Failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+
+      if (data.user) {
+        toast({
+          title: "Registration Successful!",
+          description: "Your account has been created. You can now log in.",
+        });
+        
+        // Clear registration form
+        setRegisterEmail("");
+        setRegisterPassword("");
+        setRegisterConfirmPassword("");
+        
+        // Switch to login tab if using tabs
+        // Note: You may need to handle tab switching here
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 flex flex-col items-center">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-            <Shield className="w-6 h-6 text-primary" />
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      
+      <main className="flex-1 flex items-center justify-center py-12 px-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+              <Lock className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold mb-2">Welcome to KCTienda</h1>
+            <p className="text-muted-foreground">Sign in to your account or create a new one</p>
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Welcome</CardTitle>
-          <CardDescription className="text-center">
-            Sign in to access the admin panel
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Signing in..." : "Sign In"}
-                </Button>
-              </form>
+
+            <TabsContent value="login">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Login</CardTitle>
+                  <CardDescription>
+                    Enter your credentials to access your account
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="login-email">Email</Label>
+                      <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="your@email.com"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="login-password">Password</Label>
+                      <Input
+                        id="login-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Signing in...
+                        </>
+                      ) : (
+                        "Sign In"
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
             </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                    required
-                    minLength={8}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Must be at least 8 characters with uppercase, lowercase, number, and special character
-                  </p>
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Creating account..." : "Sign Up"}
-                </Button>
-              </form>
+
+            <TabsContent value="register">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Create Account</CardTitle>
+                  <CardDescription>
+                    Sign up for a new account to get started
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleRegister} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="register-email">Email</Label>
+                      <Input
+                        id="register-email"
+                        type="email"
+                        placeholder="your@email.com"
+                        value={registerEmail}
+                        onChange={(e) => setRegisterEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-password">Password</Label>
+                      <Input
+                        id="register-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={registerPassword}
+                        onChange={(e) => setRegisterPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Password must be at least 6 characters
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-confirm-password">Confirm Password</Label>
+                      <Input
+                        id="register-confirm-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={registerConfirmPassword}
+                        onChange={(e) => setRegisterConfirmPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating account...
+                        </>
+                      ) : (
+                        "Create Account"
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
+        </div>
+      </main>
+      
+      <Footer />
     </div>
   );
 };
