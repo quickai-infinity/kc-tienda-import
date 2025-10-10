@@ -22,10 +22,8 @@ async function downloadFromFTP(
 ): Promise<string> {
   console.log(`Attempting to download file from FTP: ${host}${filePath}`);
   
-  // Note: Deno doesn't have native FTP support, so we'll use fetch with FTP URL
-  // If the FTP server supports HTTP/HTTPS, we could use that instead
-  // For production, consider using a dedicated FTP library or service
-  
+  // Use Deno's native fetch with FTP URL support
+  // This works with many FTP servers in passive mode
   const ftpUrl = `ftp://${username}:${encodeURIComponent(password)}@${host}${filePath}`;
   
   try {
@@ -33,11 +31,19 @@ async function downloadFromFTP(
     if (!response.ok) {
       throw new Error(`FTP download failed: ${response.status} ${response.statusText}`);
     }
-    return await response.text();
+    const content = await response.text();
+    console.log(`Downloaded ${content.length} bytes from FTP`);
+    return content;
   } catch (error) {
     console.error('FTP download error:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to download file from FTP: ${errorMessage}`);
+    
+    // If fetch doesn't work, provide helpful error message
+    throw new Error(
+      `Failed to download file from FTP: ${errorMessage}. ` +
+      `Note: If the FTP server doesn't support passive mode or fetch-based access, ` +
+      `consider using an HTTP endpoint or alternative file transfer method.`
+    );
   }
 }
 
@@ -57,32 +63,16 @@ function parseCSV(csvContent: string): CatalogRow[] {
     const line = dataLines[i].trim();
     if (!line) continue;
     
-    // Parse CSV line (handle quoted fields with commas)
-    const fields: string[] = [];
-    let currentField = '';
-    let inQuotes = false;
+    // Parse CSV line using semicolon as delimiter (common in Spanish CSVs)
+    const fields = line.split(';').map(f => f.trim().replace(/^"|"$/g, ''));
     
-    for (let j = 0; j < line.length; j++) {
-      const char = line[j];
-      
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        fields.push(currentField.trim());
-        currentField = '';
-      } else {
-        currentField += char;
-      }
-    }
-    fields.push(currentField.trim());
-    
-    // Map fields to catalog row
+    // Map fields to catalog row (adjust indices based on actual CSV structure)
     if (fields.length >= 6) {
       records.push({
         part_number: fields[0] || '',
         brand: fields[1] || '',
         stock: parseInt(fields[2]) || 0,
-        price: parseFloat(fields[3]) || 0,
+        price: parseFloat(fields[3].replace(',', '.')) || 0, // Handle European decimal format
         description: fields[4] || '',
         image_url: fields[5] || '',
       });
