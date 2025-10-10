@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { ShoppingCart, Star } from "lucide-react";
+import { useCart } from "@/contexts/CartContext";
 
 const products = [
   {
@@ -54,6 +55,8 @@ const products = [
 ];
 
 export const ProductGrid = () => {
+  const { addToCart } = useCart();
+  
   return (
     <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
@@ -104,7 +107,10 @@ export const ProductGrid = () => {
               </CardContent>
 
               <CardFooter className="p-4 pt-0">
-                <Button className="w-full bg-accent hover:bg-accent/90 group">
+                <Button 
+                  className="w-full bg-accent hover:bg-accent/90 group"
+                  onClick={() => addToCart(product)}
+                >
                   <ShoppingCart className="mr-2 h-4 w-4" />
                   Add to Cart
                 </Button>
