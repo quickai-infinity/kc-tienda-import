@@ -151,43 +151,27 @@ export default function Admin() {
     try {
       toast({
         title: "Starting ELSI Sync",
-        description: "Fetching catalog from FTP...",
+        description: "Downloading both catalog files from FTP and syncing to database...",
       });
 
-      // Step 1: Fetch catalog from FTP
-      const { data: fetchData, error: fetchError } = await supabase.functions.invoke(
-        'fetchElsiCatalog',
+      const { data, error } = await supabase.functions.invoke(
+        'syncElsiCatalog',
         {
           body: { manual: true }
         }
       );
 
-      if (fetchError) throw fetchError;
+      if (error) throw error;
 
-      toast({
-        title: "Catalog Fetched",
-        description: `${fetchData?.records_processed || 0} products downloaded. Syncing to products table...`,
-      });
-
-      // Wait a moment before syncing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Step 2: Update products from catalog
-      const { data: updateData, error: updateError } = await supabase.functions.invoke(
-        'updateProductsFromElsi',
-        {
-          body: { manual: true }
-        }
-      );
-
-      if (updateError) throw updateError;
-
-      const stats = updateData?.stats || {};
+      const summary = data?.summary || {};
       
       toast({
         title: "Sync Complete ✅",
-        description: `Created/Updated: ${stats.created || 0} | Errors: ${stats.errors || 0}`,
+        description: `Inserted: ${summary.inserted || 0} | Updated: ${summary.updated || 0} | Skipped: ${summary.skipped || 0} | Errors: ${summary.errors || 0}`,
+        duration: 10000,
       });
+
+      console.log('Full sync summary:', summary);
 
       // Refresh all data
       await fetchAllData();
@@ -310,7 +294,7 @@ export default function Admin() {
                 ELSI Catalog Sync
               </CardTitle>
               <CardDescription>
-                Manually trigger the catalog fetch and product sync process with 5-minute rate limiting
+                Downloads both ELSI catalog files (daily + hourly updates) and syncs all products to the database
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
