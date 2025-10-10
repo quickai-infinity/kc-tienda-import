@@ -273,6 +273,10 @@ export type Database = {
       }
     }
     Functions: {
+      cleanup_old_logs: {
+        Args: { days_to_keep?: number }
+        Returns: number
+      }
       decrypt_sensitive: {
         Args: { encrypted_data: string; key?: string }
         Returns: string

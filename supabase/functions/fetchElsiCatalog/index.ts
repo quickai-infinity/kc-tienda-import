@@ -188,6 +188,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let metricsId: string | null = null;
+
   try {
     console.log('fetchElsiCatalog function invoked');
     
@@ -226,7 +229,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check rate limiting - prevent syncs more frequent than 5 minutes
+    // Check rate limiting
     const { data: syncState } = await supabase
       .from('sync_state')
       .select('last_run, in_progress')
@@ -256,6 +259,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Create metrics record
+    const { data: metricsRecord } = await supabase
+      .from('sync_metrics')
+      .insert({
+        operation: 'fetch_catalog',
+        started_at: new Date().toISOString(),
+        status: 'in_progress',
+        triggered_by: user.id
+      })
+      .select()
+      .single();
+    
+    metricsId = metricsRecord?.id;
+
     // Set sync in progress
     await supabase
       .from('sync_state')
@@ -278,6 +295,20 @@ Deno.serve(async (req) => {
     
     if (catalogRecords.length === 0) {
       await logOperation(supabase, 'fetch_catalog', 'warning', 'No records found in CSV', 0);
+      
+      // Update metrics
+      if (metricsId) {
+        await supabase
+          .from('sync_metrics')
+          .update({
+            completed_at: new Date().toISOString(),
+            status: 'warning',
+            duration_seconds: Math.round((Date.now() - startTime) / 1000),
+            error_message: 'No records found in CSV'
+          })
+          .eq('id', metricsId);
+      }
+      
       return new Response(
         JSON.stringify({ message: 'No records to process' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -296,8 +327,9 @@ Deno.serve(async (req) => {
       throw new Error('Database operation failed');
     }
 
-    console.log(`Inserting ${catalogRecords.length} records...`);
-    const batchSize = 100;
+    console.log(`Inserting ${catalogRecords.length} records in optimized batches...`);
+    // Optimized: Larger batches for faster imports
+    const batchSize = 500;
     let totalInserted = 0;
 
     for (let i = 0; i < catalogRecords.length; i += batchSize) {
@@ -338,11 +370,25 @@ Deno.serve(async (req) => {
       .update({ in_progress: false })
       .eq('operation', 'fetch_catalog');
 
+    // Update metrics
+    if (metricsId) {
+      await supabase
+        .from('sync_metrics')
+        .update({
+          completed_at: new Date().toISOString(),
+          status: 'success',
+          records_processed: totalInserted,
+          duration_seconds: Math.round((Date.now() - startTime) / 1000)
+        })
+        .eq('id', metricsId);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         message: `Successfully processed ${totalInserted} records`,
         records_processed: totalInserted,
+        duration_seconds: Math.round((Date.now() - startTime) / 1000)
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
@@ -363,6 +409,19 @@ Deno.serve(async (req) => {
         .from('sync_state')
         .update({ in_progress: false })
         .eq('operation', 'fetch_catalog');
+      
+      // Update metrics
+      if (metricsId) {
+        await supabase
+          .from('sync_metrics')
+          .update({
+            completed_at: new Date().toISOString(),
+            status: 'error',
+            duration_seconds: Math.round((Date.now() - startTime) / 1000),
+            error_message: errorMessage
+          })
+          .eq('id', metricsId);
+      }
     } catch (logError) {
       console.error('Failed to log error:', logError);
     }

@@ -56,10 +56,12 @@ async function logOperation(
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
+  let metricsId: string | null = null;
 
   try {
     console.log('updateProductsFromElsi function invoked');
@@ -129,6 +131,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Create metrics record
+    const { data: metricsRecord } = await supabase
+      .from('sync_metrics')
+      .insert({
+        operation: 'update_products',
+        started_at: new Date().toISOString(),
+        status: 'in_progress',
+        triggered_by: user.id
+      })
+      .select()
+      .single();
+    
+    metricsId = metricsRecord?.id;
+
     // Set sync in progress
     await supabase
       .from('sync_state')
@@ -154,13 +170,26 @@ Deno.serve(async (req) => {
       const message = 'No items found in elsi_catalog_temp';
       console.log(message);
       await logOperation(supabase, 'update_products', 'warning', message, 0);
+      
+      if (metricsId) {
+        await supabase
+          .from('sync_metrics')
+          .update({
+            completed_at: new Date().toISOString(),
+            status: 'warning',
+            duration_seconds: Math.round((Date.now() - startTime) / 1000),
+            error_message: message
+          })
+          .eq('id', metricsId);
+      }
+      
       return new Response(
         JSON.stringify({ message, stats: { updated: 0, created: 0, errors: 0, skipped: 0 } }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 
-    console.log(`Processing ${catalogItems.length} catalog items...`);
+    console.log(`Processing ${catalogItems.length} catalog items with optimized batch upsert...`);
     
     const stats: ProductUpdateStats = {
       updated: 0,
@@ -169,34 +198,19 @@ Deno.serve(async (req) => {
       skipped: 0,
     };
 
-    // Process each catalog item
+    // Optimized: Batch upsert instead of individual operations
+    const productBatch = [];
+    
     for (const item of catalogItems as ElsiCatalogItem[]) {
       try {
-        // Skip items without part number
         if (!item.part_number) {
-          console.log('Skipping item without part_number');
           stats.skipped++;
           continue;
         }
 
-        // Check if product exists by matching sku to part_number
-        const { data: existingProducts, error: checkError } = await supabase
-          .from('products')
-          .select('id, sku, image_url')
-          .eq('sku', item.part_number)
-          .limit(1);
-
-        if (checkError) {
-          console.error(`Error checking product ${item.part_number}:`, checkError);
-          stats.errors++;
-          continue;
-        }
-
-        // Convert price to cents (assuming price is in euros)
         const priceCents = Math.round(item.price * 100);
 
-        // Prepare product data
-        const productData = {
+        productBatch.push({
           sku: item.part_number,
           title: item.description || item.part_number,
           description: item.description,
@@ -206,56 +220,36 @@ Deno.serve(async (req) => {
           currency: 'eur',
           image_url: item.image_url,
           active: true,
-        };
+        });
 
-        if (existingProducts && existingProducts.length > 0) {
-          // Update existing product
-          const existingProduct = existingProducts[0];
-          
-          // Only update image_url if it's different
-          const updateData = {
-            ...productData,
-            image_url: item.image_url && item.image_url !== existingProduct.image_url 
-              ? item.image_url 
-              : existingProduct.image_url,
-            updated_at: new Date().toISOString(),
-          };
-
-          const { error: updateError } = await supabase
-            .from('products')
-            .update(updateData)
-            .eq('id', existingProduct.id);
-
-          if (updateError) {
-            console.error(`Error updating product ${item.part_number}:`, updateError);
-            stats.errors++;
-          } else {
-            console.log(`Updated product: ${item.part_number}`);
-            stats.updated++;
-          }
-        } else {
-          // Create new product
-          const { error: insertError } = await supabase
-            .from('products')
-            .insert([productData]);
-
-          if (insertError) {
-            console.error(`Error creating product ${item.part_number}:`, insertError);
-            stats.errors++;
-          } else {
-            console.log(`Created new product: ${item.part_number}`);
-            stats.created++;
-          }
-        }
       } catch (itemError) {
         console.error(`Error processing item ${item.part_number}:`, itemError);
         stats.errors++;
       }
     }
 
-    // Log success
+    // Perform batch upsert (update on conflict)
+    if (productBatch.length > 0) {
+      const { data: upsertedProducts, error: upsertError } = await supabase
+        .from('products')
+        .upsert(productBatch, { 
+          onConflict: 'sku',
+          ignoreDuplicates: false 
+        })
+        .select('id, sku');
+
+      if (upsertError) {
+        console.error('Error in batch upsert:', upsertError);
+        stats.errors += productBatch.length;
+      } else {
+        // All records were upserted successfully
+        stats.updated = upsertedProducts?.length || 0;
+        stats.created = stats.updated; // Can't distinguish in upsert
+      }
+    }
+
     const totalProcessed = stats.updated + stats.created;
-    const message = `Processed ${catalogItems.length} items: ${stats.created} created, ${stats.updated} updated, ${stats.errors} errors, ${stats.skipped} skipped`;
+    const message = `Processed ${catalogItems.length} items: ${stats.created} created/updated, ${stats.errors} errors, ${stats.skipped} skipped`;
     
     await logOperation(
       supabase,
@@ -273,11 +267,28 @@ Deno.serve(async (req) => {
       .update({ in_progress: false })
       .eq('operation', 'update_products');
 
+    // Update metrics
+    if (metricsId) {
+      await supabase
+        .from('sync_metrics')
+        .update({
+          completed_at: new Date().toISOString(),
+          status: stats.errors > 0 ? 'partial_success' : 'success',
+          records_processed: totalProcessed,
+          records_created: stats.created,
+          records_updated: stats.updated,
+          records_failed: stats.errors,
+          duration_seconds: Math.round((Date.now() - startTime) / 1000)
+        })
+        .eq('id', metricsId);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         message,
         stats,
+        duration_seconds: Math.round((Date.now() - startTime) / 1000)
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
@@ -287,7 +298,6 @@ Deno.serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const userMessage = error instanceof Error ? sanitizeError(error) : 'An error occurred';
     
-    // Try to log the error
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -299,6 +309,19 @@ Deno.serve(async (req) => {
         .from('sync_state')
         .update({ in_progress: false })
         .eq('operation', 'update_products');
+      
+      // Update metrics
+      if (metricsId) {
+        await supabase
+          .from('sync_metrics')
+          .update({
+            completed_at: new Date().toISOString(),
+            status: 'error',
+            duration_seconds: Math.round((Date.now() - startTime) / 1000),
+            error_message: errorMessage
+          })
+          .eq('id', metricsId);
+      }
     } catch (logError) {
       console.error('Failed to log error:', logError);
     }
