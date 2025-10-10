@@ -40,6 +40,9 @@ export const Navbar = () => {
             <Link to="/blog" className="text-sm font-medium hover:text-accent transition-colors">
               Blog
             </Link>
+            <Link to="/admin" className="text-sm font-medium hover:text-accent transition-colors">
+              Admin
+            </Link>
           </div>
 
           {/* Actions */}
@@ -110,6 +113,13 @@ export const Navbar = () => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Blog
+              </Link>
+              <Link
+                to="/admin"
+                className="block py-2 text-sm font-medium hover:text-accent transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Admin
               </Link>
               <div className="pt-4 border-t flex items-center space-x-4">
                 <Button
