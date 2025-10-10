@@ -7,8 +7,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 const Contact = () => {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    // Placeholder for form submission
+    setTimeout(() => {
+      toast({
+        title: "Message Sent!",
+        description: "Thank you for contacting us. We'll get back to you soon.",
+      });
+      setIsSubmitting(false);
+    }, 1000);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -45,18 +64,14 @@ const Contact = () => {
                     <CardTitle>Send us a Message</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <form className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="name">Name</Label>
-                        <Input id="name" placeholder="Your name" />
+                        <Input id="name" placeholder="Your name" required />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" placeholder="your@email.com" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="subject">Subject</Label>
-                        <Input id="subject" placeholder="How can we help?" />
+                        <Input id="email" type="email" placeholder="your@email.com" required />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="message">Message</Label>
@@ -64,10 +79,11 @@ const Contact = () => {
                           id="message" 
                           placeholder="Tell us more..." 
                           rows={5}
+                          required
                         />
                       </div>
-                      <Button type="submit" className="w-full">
-                        Send Message
+                      <Button type="submit" className="w-full" disabled={isSubmitting}>
+                        {isSubmitting ? "Sending..." : "Send Message"}
                       </Button>
                     </form>
                   </CardContent>
@@ -84,24 +100,33 @@ const Contact = () => {
                         <Mail className="h-5 w-5 text-primary mt-0.5" />
                         <div>
                           <p className="font-medium">Email</p>
-                          <p className="text-sm text-muted-foreground">support@kctienda.com</p>
+                          <a 
+                            href="mailto:info@kccomputacion.com" 
+                            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            info@kccomputacion.com
+                          </a>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
                         <Phone className="h-5 w-5 text-primary mt-0.5" />
                         <div>
                           <p className="font-medium">Phone</p>
-                          <p className="text-sm text-muted-foreground">+1 (555) 123-4567</p>
+                          <a 
+                            href="tel:+34924669921" 
+                            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            +34 924 669 921
+                          </a>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
                         <MapPin className="h-5 w-5 text-primary mt-0.5" />
                         <div>
-                          <p className="font-medium">Address</p>
+                          <p className="font-medium">Location</p>
                           <p className="text-sm text-muted-foreground">
-                            123 Commerce Street<br />
-                            Tech District, CA 94102<br />
-                            United States
+                            Donostia / San Sebastián<br />
+                            Spain
                           </p>
                         </div>
                       </div>

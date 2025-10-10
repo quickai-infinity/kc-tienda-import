@@ -15,6 +15,8 @@ import Shop from "./pages/Shop";
 import About from "./pages/About";
 import Blog from "./pages/Blog";
 import Contact from "./pages/Contact";
+import FAQ from "./pages/FAQ";
+import ShippingInfo from "./pages/ShippingInfo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,12 +32,14 @@ console.log("Registered routes:", [
   "/shop",
   "/about",
   "/blog",
-  "/contact"
+  "/contact",
+  "/faq",
+  "/shipping-info"
 ]);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <CartProvider>
         <TooltipProvider>
           <Toaster />
@@ -52,6 +56,8 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/shipping-info" element={<ShippingInfo />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

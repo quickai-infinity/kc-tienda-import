@@ -52,18 +52,13 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/shipping" className="text-primary-foreground/80 hover:text-accent transition-colors text-sm">
-                  Shipping Info
-                </Link>
-              </li>
-              <li>
-                <Link to="/returns" className="text-primary-foreground/80 hover:text-accent transition-colors text-sm">
-                  Returns
-                </Link>
-              </li>
-              <li>
                 <Link to="/faq" className="text-primary-foreground/80 hover:text-accent transition-colors text-sm">
                   FAQ
+                </Link>
+              </li>
+              <li>
+                <Link to="/shipping-info" className="text-primary-foreground/80 hover:text-accent transition-colors text-sm">
+                  Shipping Info
                 </Link>
               </li>
             </ul>
@@ -75,15 +70,15 @@ export const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-start gap-2 text-sm">
                 <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span className="text-primary-foreground/80">123 Tech Street, Innovation City, TC 12345</span>
+                <span className="text-primary-foreground/80">Donostia / San Sebastián, Spain</span>
               </li>
               <li className="flex items-center gap-2 text-sm">
                 <Phone className="h-4 w-4 flex-shrink-0" />
-                <span className="text-primary-foreground/80">+1 (555) 123-4567</span>
+                <span className="text-primary-foreground/80">+34 924 669 921</span>
               </li>
               <li className="flex items-center gap-2 text-sm">
                 <Mail className="h-4 w-4 flex-shrink-0" />
-                <span className="text-primary-foreground/80">hello@kctienda.com</span>
+                <span className="text-primary-foreground/80">info@kccomputacion.com</span>
               </li>
             </ul>
           </div>
