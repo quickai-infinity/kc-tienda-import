@@ -128,6 +128,27 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_state: {
+        Row: {
+          created_at: string | null
+          in_progress: boolean | null
+          last_run: string | null
+          operation: string
+        }
+        Insert: {
+          created_at?: string | null
+          in_progress?: boolean | null
+          last_run?: string | null
+          operation: string
+        }
+        Update: {
+          created_at?: string | null
+          in_progress?: boolean | null
+          last_run?: string | null
+          operation?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

@@ -226,6 +226,45 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check rate limiting - prevent syncs more frequent than 5 minutes
+    const { data: syncState } = await supabase
+      .from('sync_state')
+      .select('last_run, in_progress')
+      .eq('operation', 'fetch_catalog')
+      .single();
+
+    if (syncState) {
+      if (syncState.in_progress) {
+        return new Response(
+          JSON.stringify({ error: "Sync already in progress" }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const lastRun = new Date(syncState.last_run);
+      const now = new Date();
+      const minutesSinceLastRun = (now.getTime() - lastRun.getTime()) / 1000 / 60;
+
+      if (minutesSinceLastRun < 5) {
+        return new Response(
+          JSON.stringify({ 
+            error: "Rate limit exceeded",
+            message: `Please wait ${Math.ceil(5 - minutesSinceLastRun)} minutes before syncing again`
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Set sync in progress
+    await supabase
+      .from('sync_state')
+      .upsert({ 
+        operation: 'fetch_catalog', 
+        in_progress: true,
+        last_run: new Date().toISOString()
+      });
+
     // FTP credentials
     const ftpHost = 'shop.elsi.es';
     const ftpUsername = 'elsitarifa1';
@@ -293,6 +332,12 @@ Deno.serve(async (req) => {
 
     console.log('Catalog update completed successfully');
 
+    // Clear in_progress flag
+    await supabase
+      .from('sync_state')
+      .update({ in_progress: false })
+      .eq('operation', 'fetch_catalog');
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -312,6 +357,12 @@ Deno.serve(async (req) => {
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
       await logOperation(supabase, 'fetch_catalog', 'error', errorMessage, 0);
+      
+      // Clear in_progress flag on error
+      await supabase
+        .from('sync_state')
+        .update({ in_progress: false })
+        .eq('operation', 'fetch_catalog');
     } catch (logError) {
       console.error('Failed to log error:', logError);
     }

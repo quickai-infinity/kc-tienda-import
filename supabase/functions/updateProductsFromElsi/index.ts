@@ -99,6 +99,45 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check rate limiting
+    const { data: syncState } = await supabase
+      .from('sync_state')
+      .select('last_run, in_progress')
+      .eq('operation', 'update_products')
+      .single();
+
+    if (syncState) {
+      if (syncState.in_progress) {
+        return new Response(
+          JSON.stringify({ error: "Sync already in progress" }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const lastRun = new Date(syncState.last_run);
+      const now = new Date();
+      const minutesSinceLastRun = (now.getTime() - lastRun.getTime()) / 1000 / 60;
+
+      if (minutesSinceLastRun < 5) {
+        return new Response(
+          JSON.stringify({ 
+            error: "Rate limit exceeded",
+            message: `Please wait ${Math.ceil(5 - minutesSinceLastRun)} minutes before syncing again`
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Set sync in progress
+    await supabase
+      .from('sync_state')
+      .upsert({ 
+        operation: 'update_products', 
+        in_progress: true,
+        last_run: new Date().toISOString()
+      });
+
     // Fetch all items from elsi_catalog_temp
     console.log('Fetching catalog items from elsi_catalog_temp...');
     const { data: catalogItems, error: fetchError } = await supabase
@@ -228,6 +267,12 @@ Deno.serve(async (req) => {
 
     console.log('Product update completed:', message);
 
+    // Clear in_progress flag
+    await supabase
+      .from('sync_state')
+      .update({ in_progress: false })
+      .eq('operation', 'update_products');
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -248,6 +293,12 @@ Deno.serve(async (req) => {
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
       await logOperation(supabase, 'update_products', 'error', errorMessage, 0);
+      
+      // Clear in_progress flag on error
+      await supabase
+        .from('sync_state')
+        .update({ in_progress: false })
+        .eq('operation', 'update_products');
     } catch (logError) {
       console.error('Failed to log error:', logError);
     }

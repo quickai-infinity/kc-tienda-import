@@ -8,6 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Shield } from "lucide-react";
+import { z } from "zod";
+
+const passwordSchema = z.string()
+  .min(8, "Password must be at least 8 characters")
+  .regex(/[A-Z]/, "Password must contain an uppercase letter")
+  .regex(/[a-z]/, "Password must contain a lowercase letter")
+  .regex(/[0-9]/, "Password must contain a number")
+  .regex(/[^A-Za-z0-9]/, "Password must contain a special character");
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -23,8 +31,9 @@ const Auth = () => {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    const passwordValidation = passwordSchema.safeParse(password);
+    if (!passwordValidation.success) {
+      toast.error(passwordValidation.error.errors[0].message);
       return;
     }
 
@@ -163,10 +172,10 @@ const Auth = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
                     required
-                    minLength={6}
+                    minLength={8}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Must be at least 6 characters
+                    Must be at least 8 characters with uppercase, lowercase, number, and special character
                   </p>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>

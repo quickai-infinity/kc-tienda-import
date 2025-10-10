@@ -56,14 +56,15 @@ const Cart = () => {
                 <CardContent className="p-6">
                   <div className="flex gap-4">
                     <img
-                      src={item.image}
-                      alt={item.name}
+                      src={item.image_url || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80"}
+                      alt={item.title}
                       className="w-24 h-24 object-cover rounded-lg"
                     />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{item.name}</h3>
+                      <h3 className="font-semibold text-lg">{item.title}</h3>
                       <p className="text-2xl font-bold text-primary mt-2">
-                        ${item.price.toFixed(2)}
+                        {item.currency === 'eur' ? '€' : '$'}
+                        {(item.price_cents / 100).toFixed(2)}
                       </p>
                       <div className="flex items-center gap-3 mt-4">
                         <Button
@@ -104,7 +105,7 @@ const Cart = () => {
                 <div className="space-y-4 mb-6">
                   <div className="flex justify-between text-lg">
                     <span>Subtotal</span>
-                    <span className="font-semibold">${totalPrice.toFixed(2)}</span>
+                    <span className="font-semibold">€{totalPrice.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-lg">
                     <span>Shipping</span>
@@ -113,7 +114,7 @@ const Cart = () => {
                   <div className="border-t pt-4">
                     <div className="flex justify-between text-2xl font-bold">
                       <span>Total</span>
-                      <span className="text-primary">${totalPrice.toFixed(2)}</span>
+                      <span className="text-primary">€{totalPrice.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
