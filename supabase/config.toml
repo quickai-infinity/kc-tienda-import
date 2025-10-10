@@ -1,1 +1,4 @@
 project_id = "uwvhieodebkjwuedtcut"
+
+[functions.fetchElsiCatalog]
+verify_jwt = false

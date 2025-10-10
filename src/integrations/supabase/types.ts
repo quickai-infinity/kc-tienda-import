@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      elsi_catalog_temp: {
+        Row: {
+          brand: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          part_number: string
+          price: number | null
+          stock: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          part_number: string
+          price?: number | null
+          stock?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          part_number?: string
+          price?: number | null
+          stock?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      elsi_logs: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string | null
+          operation: string
+          records_processed: number | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          operation: string
+          records_processed?: number | null
+          status: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          operation?: string
+          records_processed?: number | null
+          status?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           active: boolean | null
