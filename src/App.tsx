@@ -10,9 +10,20 @@ import Cart from "./pages/Cart";
 import Success from "./pages/Success";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
+import Products from "./pages/Products";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+// Log all registered routes for debugging
+console.log("Registered routes:", [
+  "/",
+  "/cart",
+  "/success",
+  "/auth",
+  "/admin",
+  "/products"
+]);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -28,6 +39,7 @@ const App = () => (
               <Route path="/success" element={<Success />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/products" element={<Products />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
