@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, Search, User, Menu, X, Moon, Sun, LogOut } from "lucide-react";
+import { ShoppingCart, Search, User, Menu, X, Moon, Sun, LogOut, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "next-themes";
 import { useCart } from "@/contexts/CartContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -25,6 +26,7 @@ export const Navbar = () => {
   const { theme, setTheme } = useTheme();
   const { totalItems } = useCart();
   const { toast } = useToast();
+  const { language, setLanguage, t } = useLanguage();
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -103,29 +105,47 @@ export const Navbar = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             <Link to="/shop" className="text-sm font-medium hover:text-accent transition-colors">
-              Shop
+              {t("nav.shop")}
             </Link>
             <Link to="/products" className="text-sm font-medium hover:text-accent transition-colors">
-              Products
+              {t("nav.products")}
             </Link>
             <Link to="/about" className="text-sm font-medium hover:text-accent transition-colors">
-              About
+              {t("nav.about")}
             </Link>
             <Link to="/blog" className="text-sm font-medium hover:text-accent transition-colors">
-              Blog
+              {t("nav.blog")}
             </Link>
             <Link to="/contact" className="text-sm font-medium hover:text-accent transition-colors">
-              Contact
+              {t("nav.contact")}
             </Link>
             {isAdmin && (
               <Link to="/admin" className="text-sm font-medium hover:text-accent transition-colors">
-                Admin
+                {t("nav.admin")}
               </Link>
             )}
           </div>
 
           {/* Actions */}
           <div className="flex items-center space-x-4">
+            {/* Language Selector */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="hidden md:flex">
+                  <Globe className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setLanguage("es")}>
+                  <span className={language === "es" ? "font-bold" : ""}>🇪🇸 Español</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLanguage("en")}>
+                  <span className={language === "en" ? "font-bold" : ""}>🇬🇧 English</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Theme Toggle */}
             <Button
               variant="ghost"
               size="icon"
@@ -148,7 +168,7 @@ export const Navbar = () => {
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>
                     <div className="flex flex-col">
-                      <span className="font-medium">My Account</span>
+                      <span className="font-medium">{t("nav.myAccount")}</span>
                       <span className="text-xs text-muted-foreground truncate max-w-[200px]">
                         {user.email}
                       </span>
@@ -157,12 +177,12 @@ export const Navbar = () => {
                   <DropdownMenuSeparator />
                   {isAdmin && (
                     <DropdownMenuItem onClick={() => navigate("/admin")}>
-                      Admin Dashboard
+                      {t("nav.admin")}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
                     <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
+                    {t("nav.signOut")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

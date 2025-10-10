@@ -1,55 +1,65 @@
+import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
+import logo from "@/assets/logo.png";
 import heroImage from "@/assets/hero-tech.jpg";
 
 export const Hero = () => {
+  const { t } = useLanguage();
+
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden hero-gradient">
-      {/* Background Image with Overlay */}
-      <div className="absolute inset-0 z-0">
-        <img
-          src={heroImage}
-          alt="Premium Technology"
-          className="w-full h-full object-cover opacity-40"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-secondary/60" />
+    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+      {/* Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${heroImage})` }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/80 to-background/95" />
       </div>
 
       {/* Content */}
-      <div className="container relative z-10 mx-auto px-4 py-20">
-        <div className="max-w-3xl animate-slide-up">
-          <p className="text-primary-foreground/90 text-sm md:text-base font-medium mb-4 tracking-wide uppercase">
-            Introducing the Future
-          </p>
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-primary-foreground mb-6 leading-tight">
-            High-Performance &{" "}
-            <span className="block">Elegant Design</span>
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="max-w-4xl mx-auto text-center animate-fade-in">
+          {/* Translucent Logo */}
+          <div className="mb-8 flex justify-center">
+            <img 
+              src={logo} 
+              alt="KC Tienda Logo" 
+              className="h-32 w-auto opacity-60 animate-scale-in"
+            />
+          </div>
+
+          {/* Main Title */}
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-slide-up">
+            {t("hero.title")}
           </h1>
-          <p className="text-lg md:text-xl text-primary-foreground/90 mb-8 max-w-2xl">
-            Discover cutting-edge technology and premium electronics that combine power with sophistication. Experience innovation at its finest.
+
+          {/* Subtitle */}
+          <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed animate-slide-up" style={{ animationDelay: "0.1s" }}>
+            {t("hero.subtitle")}
           </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground group">
-              Shop Now
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="bg-primary-foreground/10 backdrop-blur-sm border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20"
-            >
-              Explore Products
-            </Button>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-slide-up" style={{ animationDelay: "0.2s" }}>
+            <Link to="/shop">
+              <Button size="lg" className="group bg-accent hover:bg-accent/90 text-accent-foreground">
+                {t("hero.shopNow")}
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+            <Link to="/products">
+              <Button size="lg" variant="outline" className="group">
+                {t("hero.exploreProducts")}
+                <Sparkles className="ml-2 h-5 w-5 group-hover:rotate-12 transition-transform" />
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* Floating Elements */}
-      <div className="absolute bottom-10 right-10 hidden lg:block">
-        <div className="animate-float">
-          <div className="w-20 h-20 rounded-full bg-accent/20 backdrop-blur-sm border border-accent/40" />
-        </div>
-      </div>
+      {/* Animated gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent pointer-events-none" />
     </section>
   );
 };

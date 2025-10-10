@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { ShoppingCart, Star, Loader2 } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -22,6 +23,7 @@ interface Product {
 
 export const ProductGrid = () => {
   const { addToCart } = useCart();
+  const { t } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,9 +65,9 @@ export const ProductGrid = () => {
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <div className="text-center mb-12 animate-slide-up">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Featured Products</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("products.featuredProducts")}</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Explore our curated selection of premium technology and accessories
+            {t("products.explore")}
           </p>
         </div>
 
@@ -93,7 +95,7 @@ export const ProductGrid = () => {
                       />
                       <div className="absolute top-4 right-4">
                         <span className="bg-accent text-accent-foreground text-xs px-3 py-1 rounded-full">
-                          {product.stock > 0 ? "In Stock" : "Out of Stock"}
+                          {product.stock > 0 ? t("products.inStock") : t("products.outOfStock")}
                         </span>
                       </div>
                     </div>
@@ -110,7 +112,9 @@ export const ProductGrid = () => {
                         {(product.price_cents / 100).toFixed(2)}
                       </p>
                       {product.stock > 0 && product.stock <= 10 && (
-                        <p className="text-xs text-orange-600 mt-1">Only {product.stock} left!</p>
+                        <p className="text-xs text-orange-600 mt-1">
+                          {t("products.onlyLeft")} {product.stock} {t("products.left")}
+                        </p>
                       )}
                     </div>
                   </CardContent>
@@ -122,7 +126,7 @@ export const ProductGrid = () => {
                       disabled={product.stock === 0}
                     >
                       <ShoppingCart className="mr-2 h-4 w-4" />
-                      {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
+                      {product.stock === 0 ? t("products.outOfStock") : t("products.addToCart")}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -132,7 +136,7 @@ export const ProductGrid = () => {
             {/* View All Button */}
             <div className="text-center">
               <Button size="lg" variant="outline">
-                View All Products
+                {t("products.viewAll")}
               </Button>
             </div>
           </>

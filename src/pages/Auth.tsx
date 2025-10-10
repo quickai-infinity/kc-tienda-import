@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader2, Lock } from "lucide-react";
 import { z } from "zod";
 
@@ -18,6 +19,7 @@ const passwordSchema = z.string().min(6, "Password must be at least 6 characters
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   
@@ -252,28 +254,28 @@ const Auth = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
               <Lock className="w-8 h-8 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold mb-2">Welcome to KCTienda</h1>
-            <p className="text-muted-foreground">Sign in to your account or create a new one</p>
+            <h1 className="text-3xl font-bold mb-2">{t("auth.welcome")}</h1>
+            <p className="text-muted-foreground">{t("auth.signInMessage")}</p>
           </div>
 
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
+              <TabsTrigger value="login">{t("auth.login")}</TabsTrigger>
+              <TabsTrigger value="register">{t("auth.register")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
               <Card>
                 <CardHeader>
-                  <CardTitle>Login</CardTitle>
+                  <CardTitle>{t("auth.login")}</CardTitle>
                   <CardDescription>
-                    Enter your credentials to access your account
+                    {t("auth.loginDescription")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="login-email">Email</Label>
+                      <Label htmlFor="login-email">{t("auth.email")}</Label>
                       <Input
                         id="login-email"
                         type="email"
@@ -285,7 +287,7 @@ const Auth = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="login-password">Password</Label>
+                      <Label htmlFor="login-password">{t("auth.password")}</Label>
                       <Input
                         id="login-password"
                         type="password"
@@ -300,10 +302,10 @@ const Auth = () => {
                       {loading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Signing in...
+                          {t("auth.signingIn")}
                         </>
                       ) : (
-                        "Sign In"
+                        t("auth.signIn")
                       )}
                     </Button>
                   </form>
@@ -314,15 +316,15 @@ const Auth = () => {
             <TabsContent value="register">
               <Card>
                 <CardHeader>
-                  <CardTitle>Create Account</CardTitle>
+                  <CardTitle>{t("auth.createAccount")}</CardTitle>
                   <CardDescription>
-                    Sign up for a new account to get started
+                    {t("auth.registerDescription")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleRegister} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="register-email">Email</Label>
+                      <Label htmlFor="register-email">{t("auth.email")}</Label>
                       <Input
                         id="register-email"
                         type="email"
@@ -334,7 +336,7 @@ const Auth = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="register-password">Password</Label>
+                      <Label htmlFor="register-password">{t("auth.password")}</Label>
                       <Input
                         id="register-password"
                         type="password"
@@ -345,11 +347,11 @@ const Auth = () => {
                         disabled={loading}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Password must be at least 6 characters
+                        {t("auth.passwordRequirements")}
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="register-confirm-password">Confirm Password</Label>
+                      <Label htmlFor="register-confirm-password">{t("auth.confirmPassword")}</Label>
                       <Input
                         id="register-confirm-password"
                         type="password"
@@ -364,10 +366,10 @@ const Auth = () => {
                       {loading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating account...
+                          {t("auth.creatingAccount")}
                         </>
                       ) : (
-                        "Create Account"
+                        t("auth.createAccount")
                       )}
                     </Button>
                   </form>
