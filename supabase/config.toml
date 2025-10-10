@@ -1,1 +1,10 @@
 project_id = "uwvhieodebkjwuedtcut"
+
+[functions.syncElsiCatalog]
+verify_jwt = true
+
+[functions.fetchElsiCatalog]
+verify_jwt = true
+
+[functions.updateProductsFromElsi]
+verify_jwt = true
