@@ -2,3 +2,6 @@ project_id = "uwvhieodebkjwuedtcut"
 
 [functions.fetchElsiCatalog]
 verify_jwt = false
+
+[functions.updateProductsFromElsi]
+verify_jwt = false
