@@ -63,6 +63,9 @@ export const Navbar = () => {
             <Link to="/blog" className="text-sm font-medium hover:text-accent transition-colors">
               Blog
             </Link>
+            <Link to="/contact" className="text-sm font-medium hover:text-accent transition-colors">
+              Contact
+            </Link>
             {isAdmin && (
               <Link to="/admin" className="text-sm font-medium hover:text-accent transition-colors">
                 Admin
@@ -138,6 +141,13 @@ export const Navbar = () => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Blog
+              </Link>
+              <Link
+                to="/contact"
+                className="block py-2 text-sm font-medium hover:text-accent transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Contact
               </Link>
               {isAdmin && (
                 <Link
