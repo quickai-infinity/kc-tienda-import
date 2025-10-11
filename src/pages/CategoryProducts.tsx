@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { formatPrice } from "@/lib/formatPrice";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CategorySidebar } from "@/components/CategorySidebar";
+import { SidebarToggle } from "@/components/SidebarToggle";
 
 interface Product {
   id: string;
@@ -35,6 +36,7 @@ const CategoryProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [category, setCategory] = useState<Category | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const { addToCart } = useCart();
   const { t } = useLanguage();
 
@@ -88,8 +90,11 @@ const CategoryProducts = () => {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <div className="flex-1 flex">
-          <CategorySidebar />
-          <div className="flex-1 ml-64 flex items-center justify-center">
+          <CategorySidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          <SidebarToggle isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+          <div className={`flex-1 flex items-center justify-center transition-all duration-300 ${
+            sidebarOpen ? "ml-64 sm:ml-0" : "ml-0"
+          }`}>
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         </div>
@@ -103,8 +108,11 @@ const CategoryProducts = () => {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <div className="flex-1 flex">
-          <CategorySidebar />
-          <div className="flex-1 ml-64 flex items-center justify-center">
+          <CategorySidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          <SidebarToggle isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+          <div className={`flex-1 flex items-center justify-center transition-all duration-300 ${
+            sidebarOpen ? "ml-64 sm:ml-0" : "ml-0"
+          }`}>
             <p className="text-muted-foreground">Categoría no encontrada</p>
           </div>
         </div>
@@ -118,9 +126,12 @@ const CategoryProducts = () => {
       <Navbar />
       
       <div className="flex-1 flex">
-        <CategorySidebar />
+        <CategorySidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <SidebarToggle isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
         
-        <main className="flex-1 ml-64 sm:ml-0 overflow-auto">
+        <main className={`flex-1 overflow-auto transition-all duration-300 ${
+          sidebarOpen ? "ml-64 sm:ml-0" : "ml-0"
+        }`}>
           {/* Breadcrumb */}
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
             <div className="container mx-auto px-6 py-3">

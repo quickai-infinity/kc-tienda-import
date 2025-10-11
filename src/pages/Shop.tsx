@@ -1,19 +1,26 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { CategorySidebar } from "@/components/CategorySidebar";
+import { SidebarToggle } from "@/components/SidebarToggle";
 
 const Shop = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
       <div className="flex-1 flex">
-        <CategorySidebar />
+        <CategorySidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <SidebarToggle isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
         
-        <main className="flex-1 ml-64 sm:ml-0 overflow-auto">
+        <main className={`flex-1 overflow-auto transition-all duration-300 ${
+          sidebarOpen ? "ml-64 sm:ml-0" : "ml-0"
+        }`}>
           {/* Hero Section */}
           <section className="py-16 md:py-24">
             <div className="container mx-auto px-6">

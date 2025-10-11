@@ -5,6 +5,11 @@ import { Loader2, Plus, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+interface CategorySidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
 interface Category {
   id: string;
   name: string;
@@ -35,7 +40,7 @@ const CATEGORY_GROUPS: CategoryGroup[] = [
   { id: "otros", name: "Más Productos", categories: [], keywords: [] }, // Catch-all
 ];
 
-export function CategorySidebar() {
+export function CategorySidebar({ isOpen, onClose }: CategorySidebarProps) {
   const [groupedCategories, setGroupedCategories] = useState<CategoryGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
@@ -135,7 +140,9 @@ export function CategorySidebar() {
 
   if (loading) {
     return (
-      <aside className="fixed left-0 top-[64px] bottom-0 w-64 lg:w-64 md:w-64 sm:w-full bg-background border-r border-border/50 shadow-xl overflow-y-auto">
+      <aside className={`fixed left-0 top-[64px] bottom-0 w-64 bg-background border-r border-border/50 shadow-xl overflow-y-auto z-40 transition-transform duration-300 ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      }`}>
         <div className="flex items-center justify-center h-full">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
@@ -144,7 +151,9 @@ export function CategorySidebar() {
   }
 
   return (
-    <aside className="fixed left-0 top-[64px] bottom-0 w-64 lg:w-64 md:w-64 sm:w-full bg-background border-r border-border/50 shadow-xl z-40 overflow-hidden">
+    <aside className={`fixed left-0 top-[64px] bottom-0 w-64 bg-background border-r border-border/50 shadow-xl z-40 overflow-hidden transition-transform duration-300 ${
+      isOpen ? "translate-x-0" : "-translate-x-full"
+    }`}>
       <ScrollArea className="h-full">
         <div className="py-4">
           {/* Fixed Header */}
@@ -197,6 +206,7 @@ export function CategorySidebar() {
                             <Link
                               key={category.id}
                               to={`/categoria/${category.slug}`}
+                              onClick={onClose}
                               className={`block px-8 py-2.5 text-[13px] transition-all ${
                                 active
                                   ? "text-primary font-medium bg-primary/10 border-l-3 border-primary"
