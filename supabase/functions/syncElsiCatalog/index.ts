@@ -37,6 +37,59 @@ async function fetchCSV(url: string): Promise<string> {
   return content;
 }
 
+function normalizeCategory(category: string): string {
+  if (!category) return '';
+  // Capitalize first letter of each word
+  return category
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function detectCategoryFromDescription(description: string): string {
+  const desc = description.toLowerCase();
+  
+  if (desc.includes('monitor') || desc.includes('pantalla')) {
+    return 'Monitores';
+  }
+  if (desc.includes('impresora') || desc.includes('etiqueta')) {
+    return 'Impresoras y Etiquetado';
+  }
+  if (desc.includes('scanner') || desc.includes('lector') || desc.includes('codigo') || desc.includes('código')) {
+    return 'Lectores de Códigos';
+  }
+  if (desc.includes('batería') || desc.includes('bateria') || desc.includes('cable') || desc.includes('adaptador')) {
+    return 'Accesorios';
+  }
+  if (desc.includes('teclado') || desc.includes('ratón') || desc.includes('raton') || desc.includes('mouse')) {
+    return 'Periféricos';
+  }
+  if (desc.includes('software') || desc.includes('licencia')) {
+    return 'Software';
+  }
+  
+  return '';
+}
+
+function assignCategory(rowData: Record<string, string>): string {
+  // Priority 1: familia
+  let category = rowData['familia'] || '';
+  
+  // Priority 2: subfamilia or categoria
+  if (!category) {
+    category = rowData['subfamilia'] || rowData['categoria'] || '';
+  }
+  
+  // Priority 3: Auto-detect from descripción
+  if (!category) {
+    const description = rowData['descripcion'] || rowData['descripción'] || '';
+    category = detectCategoryFromDescription(description);
+  }
+  
+  return normalizeCategory(category);
+}
+
 function parseCSV(csvContent: string): Product[] {
   console.log('Parsing CSV content...');
   const lines = csvContent.trim().split('\n').filter(line => line.trim());
@@ -95,13 +148,13 @@ function parseCSV(csvContent: string): Product[] {
     const product: Product = {
       brand: rowData['marca'] || '',
       part_number: partNumber,
-      description: rowData['descripcion'] || '',
+      description: rowData['descripcion'] || rowData['descripción'] || '',
       description2: rowData['descripcion 2'] || '',
       barcode: rowData['cod. barras'] || rowData['barcode'] || '',
       price: parseFloat(rowData['precio'] || '0'),
       stock: parseInt(rowData['stock'] || '0', 10),
       image_url: rowData['fotografia'] || rowData['imagen'] || '',
-      category: rowData['categoria'] || rowData['familia'] || '',
+      category: assignCategory(rowData),
     };
     
     products.push(product);
@@ -171,6 +224,9 @@ async function upsertProductsToDatabase(
 
   let featuredCount = 0;
   const featuredKeywords = ['promoción', 'promocion', 'oferta', 'nuevo'];
+  
+  // Track category distribution
+  const categoryCount = new Map<string, number>();
 
   // Process in batches of 100
   const batchSize = 100;
@@ -221,6 +277,10 @@ async function upsertProductsToDatabase(
             featuredCount++;
           }
 
+          // Track category for logging
+          const categoryName = product.category || 'Sin categoría';
+          categoryCount.set(categoryName, (categoryCount.get(categoryName) || 0) + 1);
+
           const { error: insertError } = await supabase
             .from('products')
             .insert({
@@ -257,6 +317,14 @@ async function upsertProductsToDatabase(
 
   console.log(`Upsert complete - Inserted: ${summary.inserted}, Updated: ${summary.updated}, Skipped: ${summary.skipped}, Errors: ${summary.errors}`);
   console.log(`Featured products set: ${featuredCount}`);
+  
+  // Log category distribution
+  console.log('Category distribution:');
+  const sortedCategories = Array.from(categoryCount.entries()).sort((a, b) => b[1] - a[1]);
+  sortedCategories.forEach(([category, count]) => {
+    console.log(`  ${category}: ${count} products`);
+  });
+  
   return summary;
 }
 
