@@ -4,12 +4,14 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RefreshCw, Database, Package, Clock, CheckCircle, XCircle, Loader2, Shield, TrendingUp, AlertCircle } from "lucide-react";
+import { RefreshCw, Database, Package, Clock, CheckCircle, XCircle, Loader2, Shield, TrendingUp, AlertCircle, ShoppingBag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProductsManager } from "@/components/admin/ProductsManager";
 
 interface SyncLog {
   operation: string;
@@ -52,6 +54,7 @@ export default function Admin() {
   const [logs, setLogs] = useState<SyncLog[]>([]);
   const [metrics, setMetrics] = useState<SyncMetric[]>([]);
   const [statistics, setStatistics] = useState<SyncStatistics[]>([]);
+  const [refreshProducts, setRefreshProducts] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -208,6 +211,9 @@ export default function Admin() {
 
         // Refresh all data from backend
         await fetchAllData();
+        
+        // Trigger products refresh
+        setRefreshProducts(prev => prev + 1);
 
       } else {
         throw new Error(data?.error || 'Sync failed');
@@ -293,6 +299,20 @@ export default function Admin() {
             </div>
           </div>
 
+          {/* Tabs for different admin sections */}
+          <Tabs defaultValue="sync" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="sync" className="flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                Sync Management
+              </TabsTrigger>
+              <TabsTrigger value="products" className="flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4" />
+                Products Manager
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="sync" className="space-y-8">
           {/* Statistics Cards */}
           {statistics.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -497,6 +517,12 @@ export default function Admin() {
               )}
             </CardContent>
           </Card>
+            </TabsContent>
+
+            <TabsContent value="products">
+              <ProductsManager refreshTrigger={refreshProducts} />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 
