@@ -14,6 +14,7 @@ interface Product {
   price: number;
   stock: number;
   image_url: string;
+  category: string;
 }
 
 interface UpsertSummary {
@@ -100,6 +101,7 @@ function parseCSV(csvContent: string): Product[] {
       price: parseFloat(rowData['precio'] || '0'),
       stock: parseInt(rowData['stock'] || '0', 10),
       image_url: rowData['fotografia'] || rowData['imagen'] || '',
+      category: rowData['categoria'] || rowData['familia'] || '',
     };
     
     products.push(product);
@@ -167,6 +169,9 @@ async function upsertProductsToDatabase(
   const existingSkuMap = new Map(existingProducts?.map(p => [p.sku, p.id]) || []);
   console.log(`Found ${existingSkuMap.size} existing products in database`);
 
+  let featuredCount = 0;
+  const featuredKeywords = ['promoción', 'promocion', 'oferta', 'nuevo'];
+
   // Process in batches of 100
   const batchSize = 100;
   for (let i = 0; i < products.length; i += batchSize) {
@@ -204,6 +209,18 @@ async function upsertProductsToDatabase(
           }
         } else {
           // INSERT: Create new product with all data from CSV
+          // Determine if product should be featured:
+          // - First 12 new products OR
+          // - Category contains promotional keywords
+          const categoryLower = (product.category || '').toLowerCase();
+          const isFeatured = 
+            featuredCount < 12 || 
+            featuredKeywords.some(keyword => categoryLower.includes(keyword));
+          
+          if (isFeatured) {
+            featuredCount++;
+          }
+
           const { error: insertError } = await supabase
             .from('products')
             .insert({
@@ -214,10 +231,11 @@ async function upsertProductsToDatabase(
               currency: 'eur',
               stock: product.stock,
               image_url: product.image_url || null,
-              category: null, // Will be set manually in Admin
+              category: product.category || null,
               brand: product.brand || null,
               tags: null,
-              active: true // New products are active by default
+              active: true, // New products are active by default
+              featured: isFeatured
             });
 
           if (insertError) {
@@ -238,6 +256,7 @@ async function upsertProductsToDatabase(
   }
 
   console.log(`Upsert complete - Inserted: ${summary.inserted}, Updated: ${summary.updated}, Skipped: ${summary.skipped}, Errors: ${summary.errors}`);
+  console.log(`Featured products set: ${featuredCount}`);
   return summary;
 }
 
