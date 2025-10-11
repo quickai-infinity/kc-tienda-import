@@ -13,6 +13,8 @@ import Cancel from "./pages/Cancel";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import Products from "./pages/Products";
+import ProductDetail from "./pages/ProductDetail";
+import ProductsByCategory from "./pages/ProductsByCategory";
 import Shop from "./pages/Shop";
 import About from "./pages/About";
 import Blog from "./pages/Blog";
@@ -31,6 +33,8 @@ console.log("Registered routes:", [
   "/auth",
   "/admin",
   "/products",
+  "/productos/:category",
+  "/producto/:id",
   "/shop",
   "/about",
   "/blog",
@@ -56,6 +60,8 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/products" element={<Products />} />
+              <Route path="/productos/:category" element={<ProductsByCategory />} />
+              <Route path="/producto/:id" element={<ProductDetail />} />
               <Route path="/shop" element={<Shop />} />
               <Route path="/about" element={<About />} />
               <Route path="/blog" element={<Blog />} />

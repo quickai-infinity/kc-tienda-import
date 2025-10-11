@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { ShoppingCart, Star, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ShoppingCart, Loader2 } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatPrice } from "@/lib/formatPrice";
+import { Link } from "react-router-dom";
 
 interface Product {
   id: string;
@@ -20,12 +22,14 @@ interface Product {
   brand: string | null;
   stock: number;
   active: boolean;
+  featured?: boolean;
 }
 
 export const ProductGrid = () => {
   const { addToCart } = useCart();
   const { t } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,6 +44,12 @@ export const ProductGrid = () => {
 
         if (error) throw error;
         setProducts(data || []);
+        
+        // Extract unique categories
+        const uniqueCategories = Array.from(
+          new Set(data?.map(p => p.category).filter(Boolean) || [])
+        ) as string[];
+        setCategories(uniqueCategories);
       } catch (error) {
         console.error('Error fetching products:', error);
         toast.error('Failed to load products');
@@ -72,6 +82,20 @@ export const ProductGrid = () => {
           </p>
         </div>
 
+        {/* Category Navigation */}
+        {categories.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-3 mb-8">
+            <Link to="/products">
+              <Button variant="outline">Todos los productos</Button>
+            </Link>
+            {categories.map((category) => (
+              <Link key={category} to={`/productos/${encodeURIComponent(category)}`}>
+                <Button variant="outline">{category}</Button>
+              </Link>
+            ))}
+          </div>
+        )}
+
         {products.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">No products available at the moment.</p>
@@ -81,66 +105,75 @@ export const ProductGrid = () => {
             {/* Product Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
               {products.map((product, index) => (
-                <Card
-                  key={product.id}
-                  className="group overflow-hidden border-border hover:shadow-lg transition-all duration-300 animate-slide-up"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <CardContent className="p-0">
-                    {/* Product Image */}
-                    <div className="relative overflow-hidden aspect-square bg-muted">
-                      <img
-                        src={product.image_url || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80"}
-                        alt={product.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                      <div className="absolute top-4 right-4">
-                        <span className="bg-accent text-accent-foreground text-xs px-3 py-1 rounded-full">
-                          {product.stock > 0 ? t("products.inStock") : t("products.outOfStock")}
-                        </span>
+                <Link key={product.id} to={`/producto/${product.id}`}>
+                  <Card
+                    className="group overflow-hidden border-border hover:shadow-lg transition-all duration-300 animate-slide-up h-full cursor-pointer"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <CardContent className="p-0">
+                      {/* Product Image */}
+                      <div className="relative overflow-hidden aspect-square bg-muted">
+                        <img
+                          src={product.image_url || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80"}
+                          alt={product.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          onError={(e) => {
+                            e.currentTarget.src = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80";
+                          }}
+                        />
+                        <div className="absolute top-4 right-4">
+                          <Badge variant={product.stock > 0 ? "default" : "destructive"}>
+                            {product.stock > 0 ? t("products.inStock") : t("products.outOfStock")}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Product Info */}
-                    <div className="p-4">
-                      {product.category && <p className="text-xs text-muted-foreground mb-1">{product.category}</p>}
-                      <h3 className="font-semibold text-lg mb-2 line-clamp-2">{product.title}</h3>
-                      {product.brand && (
-                        <p className="text-sm text-muted-foreground mb-2">{product.brand}</p>
-                      )}
-                      <p className="text-2xl font-bold text-primary">
-                        {formatPrice(product.price_cents, product.currency)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        (precio final con IVA incluido)
-                      </p>
-                      {product.stock > 0 && product.stock <= 10 && (
-                        <p className="text-xs text-orange-600 mt-1">
-                          {t("products.onlyLeft")} {product.stock} {t("products.left")}
+                      {/* Product Info */}
+                      <div className="p-4">
+                        <h3 className="font-semibold text-lg mb-1 line-clamp-2">{product.title}</h3>
+                        {product.brand && (
+                          <p className="text-sm text-muted-foreground mb-3">{product.brand}</p>
+                        )}
+                        <div className="text-2xl font-bold text-primary mb-1">
+                          {formatPrice(product.price_cents, product.currency)}
+                        </div>
+                        <p className="text-xs italic text-muted-foreground">
+                          (precio final con IVA incluido)
                         </p>
-                      )}
-                    </div>
-                  </CardContent>
+                        {product.stock > 0 && product.stock <= 10 && (
+                          <p className="text-xs text-orange-600 mt-2">
+                            {t("products.onlyLeft")} {product.stock} {t("products.left")}
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
 
-                  <CardFooter className="p-4 pt-0">
-                    <Button 
-                      className="w-full bg-accent hover:bg-accent/90 group"
-                      onClick={() => addToCart(product)}
-                      disabled={product.stock === 0}
-                    >
-                      <ShoppingCart className="mr-2 h-4 w-4" />
-                      {product.stock === 0 ? t("products.outOfStock") : t("products.addToCart")}
-                    </Button>
-                  </CardFooter>
-                </Card>
+                    <CardFooter className="p-4 pt-0">
+                      <Button 
+                        className="w-full bg-accent hover:bg-accent/90 group"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          addToCart(product);
+                          toast.success("Producto añadido al carrito");
+                        }}
+                        disabled={product.stock === 0}
+                      >
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        {product.stock === 0 ? t("products.outOfStock") : t("products.addToCart")}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </Link>
               ))}
             </div>
 
             {/* View All Button */}
             <div className="text-center">
-              <Button size="lg" variant="outline">
-                {t("products.viewAll")}
-              </Button>
+              <Link to="/products">
+                <Button size="lg" variant="outline">
+                  {t("products.viewAll")}
+                </Button>
+              </Link>
             </div>
           </>
         )}
