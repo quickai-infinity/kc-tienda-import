@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { formatPrice } from "@/lib/formatPrice";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -414,7 +415,7 @@ export function ProductsManager({ refreshTrigger }: ProductsManagerProps) {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Price:</span>
                       <span className="font-bold text-lg">
-                        €{(product.price_cents / 100).toFixed(2)}
+                        {formatPrice(product.price_cents, product.currency)}
                       </span>
                     </div>
                     

@@ -6,6 +6,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { formatPrice } from "@/lib/formatPrice";
 
 interface Product {
   id: string;
@@ -108,8 +109,7 @@ export const ProductGrid = () => {
                         <p className="text-sm text-muted-foreground mb-2">{product.brand}</p>
                       )}
                       <p className="text-2xl font-bold text-primary">
-                        {product.currency === 'eur' ? '€' : '$'}
-                        {(product.price_cents / 100).toFixed(2)}
+                        {formatPrice(product.price_cents, product.currency)}
                       </p>
                       {product.stock > 0 && product.stock <= 10 && (
                         <p className="text-xs text-orange-600 mt-1">
