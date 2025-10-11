@@ -126,8 +126,10 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          name: string | null
           price_base: number | null
           price_cents: number
+          price_final: number | null
           sku: string
           stock: number
           tags: string[] | null
@@ -143,8 +145,10 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          name?: string | null
           price_base?: number | null
           price_cents: number
+          price_final?: number | null
           sku: string
           stock?: number
           tags?: string[] | null
@@ -160,8 +164,10 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          name?: string | null
           price_base?: number | null
           price_cents?: number
+          price_final?: number | null
           sku?: string
           stock?: number
           tags?: string[] | null
