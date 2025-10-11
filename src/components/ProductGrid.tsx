@@ -111,6 +111,9 @@ export const ProductGrid = () => {
                       <p className="text-2xl font-bold text-primary">
                         {formatPrice(product.price_cents, product.currency)}
                       </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        (precio final con IVA incluido)
+                      </p>
                       {product.stock > 0 && product.stock <= 10 && (
                         <p className="text-xs text-orange-600 mt-1">
                           {t("products.onlyLeft")} {product.stock} {t("products.left")}

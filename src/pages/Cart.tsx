@@ -66,6 +66,9 @@ const Cart = () => {
                       <p className="text-2xl font-bold text-primary mt-2">
                         {formatPrice(item.price_cents, item.currency)}
                       </p>
+                      <p className="text-xs text-muted-foreground">
+                        (precio final con IVA incluido)
+                      </p>
                       <div className="flex items-center gap-3 mt-4">
                         <Button
                           variant="outline"

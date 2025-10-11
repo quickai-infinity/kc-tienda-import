@@ -273,7 +273,16 @@ async function upsertProductsToDatabase(
 
         const sku = product.part_number;
         const existingProduct = existingProductMap.get(sku);
-        const priceCents = Math.round(product.price * 100);
+        
+        // Price calculations:
+        // 1. Base price from CSV (in cents)
+        const priceBaseCents = Math.round(product.price * 100);
+        
+        // 2. Apply 16% profit margin
+        const priceWithMargin = priceBaseCents * 1.16;
+        
+        // 3. Apply 21% VAT
+        const priceFinalCents = Math.round(priceWithMargin * 1.21);
 
         if (existingProduct) {
           // UPDATE: Only update price, stock, and image_url
@@ -285,7 +294,8 @@ async function upsertProductsToDatabase(
           }
           
           const updateData: any = {
-            price_cents: priceCents,
+            price_base: priceBaseCents,
+            price_cents: priceFinalCents,
             stock: product.stock,
             updated_at: new Date().toISOString()
           };
@@ -338,7 +348,8 @@ async function upsertProductsToDatabase(
               sku: sku,
               title: product.description || product.part_number,
               description: product.description2 || product.description || null,
-              price_cents: priceCents,
+              price_base: priceBaseCents,
+              price_cents: priceFinalCents,
               currency: 'eur',
               stock: product.stock,
               image_url: product.image_url || null,
