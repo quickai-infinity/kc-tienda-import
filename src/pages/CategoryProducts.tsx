@@ -11,6 +11,8 @@ import { Loader2, ShoppingCart, ChevronRight, Home } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "@/lib/formatPrice";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { CategorySidebar } from "@/components/CategorySidebar";
 
 interface Product {
   id: string;
@@ -87,9 +89,14 @@ const CategoryProducts = () => {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <SidebarProvider>
+          <div className="flex-1 flex w-full">
+            <CategorySidebar />
+            <div className="flex-1 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          </div>
+        </SidebarProvider>
         <Footer />
       </div>
     );
@@ -99,9 +106,14 @@ const CategoryProducts = () => {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-muted-foreground">Categoría no encontrada</p>
-        </div>
+        <SidebarProvider>
+          <div className="flex-1 flex w-full">
+            <CategorySidebar />
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-muted-foreground">Categoría no encontrada</p>
+            </div>
+          </div>
+        </SidebarProvider>
         <Footer />
       </div>
     );
@@ -111,118 +123,129 @@ const CategoryProducts = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className="flex-1 py-8">
-        <div className="container mx-auto px-4">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-            <Link to="/" className="hover:text-primary flex items-center gap-1">
-              <Home className="h-4 w-4" />
-              Inicio
-            </Link>
-            <ChevronRight className="h-4 w-4" />
-            <Link to="/shop" className="hover:text-primary">
-              Categorías
-            </Link>
-            <ChevronRight className="h-4 w-4" />
-            <span className="text-foreground">{category.name}</span>
-          </nav>
-
-          {/* Category Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold mb-3">{category.name}</h1>
-            {category.description && (
-              <p className="text-muted-foreground text-lg">{category.description}</p>
-            )}
-            <p className="text-sm text-muted-foreground mt-2">
-              {products.length} {products.length === 1 ? 'producto' : 'productos'}
-            </p>
-          </div>
-
-          {/* Products Grid */}
-          {products.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No hay productos en esta categoría actualmente.</p>
-              <Link to="/shop">
-                <Button variant="outline" className="mt-4">
-                  Ver todas las categorías
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.map((product) => (
-                <Card key={product.id} className="flex flex-col">
-                  <Link to={`/producto/${product.id}`}>
-                    <div className="aspect-square overflow-hidden bg-muted">
-                      {product.image_url ? (
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="w-full h-full object-cover hover:scale-105 transition-transform"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <img
-                            src="/assets/no-image.png"
-                            alt="Sin imagen"
-                            className="w-32 h-32 opacity-50"
-                          />
-                        </div>
-                      )}
-                    </div>
+      <SidebarProvider>
+        <div className="flex-1 flex w-full">
+          <CategorySidebar />
+          
+          <main className="flex-1 overflow-auto">
+            {/* Header with Sidebar Trigger */}
+            <div className="sticky top-0 z-10 bg-background border-b">
+              <div className="container mx-auto px-4 py-3 flex items-center gap-2">
+                <SidebarTrigger />
+                <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Link to="/" className="hover:text-primary flex items-center gap-1">
+                    <Home className="h-4 w-4" />
+                    Inicio
                   </Link>
-                  
-                  <CardHeader>
-                    <CardTitle className="line-clamp-2 text-base">{product.name}</CardTitle>
-                    {product.brand && (
-                      <CardDescription className="text-xs">{product.brand}</CardDescription>
-                    )}
-                  </CardHeader>
-                  
-                  <CardContent className="flex-1">
-                    <p className="text-2xl font-bold text-green-600">
-                      {formatPrice(product.price_cents)}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      (precio final con IVA incluido)
-                    </p>
-                    {product.stock > 0 ? (
-                      <Badge variant="outline" className="mt-2">
-                        {t('inStock')}
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="mt-2">
-                        {t('outOfStock')}
-                      </Badge>
-                    )}
-                  </CardContent>
-                  
-                  <CardFooter>
-                    <Button
-                      className="w-full"
-                      disabled={product.stock <= 0}
-                      onClick={() => {
-                      addToCart({
-                        id: product.id,
-                        title: product.title,
-                        price_cents: product.price_cents,
-                        currency: 'eur',
-                        image_url: product.image_url,
-                        stock: product.stock,
-                      });
-                        toast.success(t('addedToCart'));
-                      }}
-                    >
-                      <ShoppingCart className="mr-2 h-4 w-4" />
-                      {product.stock > 0 ? t('addToCart') : t('outOfStock')}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
+                  <ChevronRight className="h-4 w-4" />
+                  <Link to="/shop" className="hover:text-primary">
+                    Categorías
+                  </Link>
+                  <ChevronRight className="h-4 w-4" />
+                  <span className="text-foreground font-medium">{category.name}</span>
+                </nav>
+              </div>
             </div>
-          )}
+
+            <div className="container mx-auto px-4 py-8">
+              {/* Category Header */}
+              <div className="mb-8">
+                <h1 className="text-3xl md:text-4xl font-bold mb-3">{category.name}</h1>
+                {category.description && !category.description.includes("importada automáticamente") && (
+                  <p className="text-muted-foreground text-lg">{category.description}</p>
+                )}
+                <p className="text-sm text-muted-foreground mt-2">
+                  {products.length} {products.length === 1 ? 'producto' : 'productos'}
+                </p>
+              </div>
+
+              {/* Products Grid */}
+              {products.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No hay productos en esta categoría actualmente.</p>
+                  <Link to="/shop">
+                    <Button variant="outline" className="mt-4">
+                      Ver todas las categorías
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {products.map((product) => (
+                    <Card key={product.id} className="flex flex-col">
+                      <Link to={`/producto/${product.id}`}>
+                        <div className="aspect-square overflow-hidden bg-muted">
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-full h-full object-cover hover:scale-105 transition-transform"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <img
+                                src="/assets/no-image.png"
+                                alt="Sin imagen"
+                                className="w-32 h-32 opacity-50"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+                      
+                      <CardHeader>
+                        <CardTitle className="line-clamp-2 text-base">{product.name}</CardTitle>
+                        {product.brand && (
+                          <CardDescription className="text-xs">{product.brand}</CardDescription>
+                        )}
+                      </CardHeader>
+                      
+                      <CardContent className="flex-1">
+                        <p className="text-2xl font-bold text-green-600">
+                          {formatPrice(product.price_cents)}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          (precio final con IVA incluido)
+                        </p>
+                        {product.stock > 0 ? (
+                          <Badge variant="outline" className="mt-2">
+                            {t('inStock')}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="mt-2">
+                            {t('outOfStock')}
+                          </Badge>
+                        )}
+                      </CardContent>
+                      
+                      <CardFooter>
+                        <Button
+                          className="w-full"
+                          disabled={product.stock <= 0}
+                          onClick={() => {
+                          addToCart({
+                            id: product.id,
+                            title: product.title,
+                            price_cents: product.price_cents,
+                            currency: 'eur',
+                            image_url: product.image_url,
+                            stock: product.stock,
+                          });
+                            toast.success(t('addedToCart'));
+                          }}
+                        >
+                          <ShoppingCart className="mr-2 h-4 w-4" />
+                          {product.stock > 0 ? t('addToCart') : t('outOfStock')}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </main>
         </div>
-      </main>
+      </SidebarProvider>
       
       <Footer />
     </div>
