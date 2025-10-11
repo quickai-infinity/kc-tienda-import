@@ -132,9 +132,11 @@ export const ProductGrid = () => {
 
                       {/* Product Info */}
                       <div className="p-4">
-                        <h3 className="font-semibold text-lg mb-1 line-clamp-2">{product.name || product.title}</h3>
+                        <h3 className="font-semibold text-lg mb-1 line-clamp-2">{product.title || product.name}</h3>
                         {product.brand && (
-                          <p className="text-sm text-muted-foreground mb-3">{product.brand}</p>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Marca: <span className="font-medium">{product.brand}</span>
+                          </p>
                         )}
                         <div className="text-2xl font-bold text-green-600 mb-1">
                           {formatPrice(product.price_final || product.price_cents, product.currency)}

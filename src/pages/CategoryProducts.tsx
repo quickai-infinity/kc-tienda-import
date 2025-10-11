@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
@@ -12,6 +12,7 @@ import { formatPrice } from "@/lib/formatPrice";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CategorySidebar } from "@/components/CategorySidebar";
 import { SidebarToggle } from "@/components/SidebarToggle";
+import { ProductSearch } from "@/components/ProductSearch";
 
 interface Product {
   id: string;
@@ -34,11 +35,32 @@ interface Category {
 const CategoryProducts = () => {
   const { slug } = useParams<{ slug: string }>();
   const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [category, setCategory] = useState<Category | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const { addToCart } = useCart();
   const { t } = useLanguage();
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    
+    if (!query.trim()) {
+      setFilteredProducts(products);
+      return;
+    }
+
+    const lowercaseQuery = query.toLowerCase();
+    const filtered = products.filter(product => 
+      (product.name?.toLowerCase().includes(lowercaseQuery)) ||
+      (product.title?.toLowerCase().includes(lowercaseQuery)) ||
+      (product.brand?.toLowerCase().includes(lowercaseQuery)) ||
+      (product.category?.toLowerCase().includes(lowercaseQuery))
+    );
+    
+    setFilteredProducts(filtered);
+  }, [products]);
 
   useEffect(() => {
     const fetchCategoryAndProducts = async () => {
@@ -74,6 +96,7 @@ const CategoryProducts = () => {
         if (productsError) throw productsError;
 
         setProducts(productsData || []);
+        setFilteredProducts(productsData || []);
       } catch (error) {
         console.error('Error fetching category products:', error);
         toast.error("Error al cargar los productos");
@@ -84,6 +107,10 @@ const CategoryProducts = () => {
 
     fetchCategoryAndProducts();
   }, [slug]);
+
+  useEffect(() => {
+    handleSearch(searchQuery);
+  }, [products, searchQuery, handleSearch]);
 
   if (loading) {
     return (
@@ -132,15 +159,22 @@ const CategoryProducts = () => {
         <main className={`flex-1 overflow-auto transition-all duration-300 ${
           sidebarOpen ? "ml-64 sm:ml-0" : "ml-0"
         }`}>
-          {/* Breadcrumb */}
+          {/* Header with Breadcrumb and Search */}
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
             <div className="container mx-auto px-6 py-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Link to="/" className="hover:text-foreground transition-colors">
-                  Inicio
-                </Link>
-                <span>/</span>
-                <span className="text-foreground">{category.name}</span>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Link to="/" className="hover:text-foreground transition-colors">
+                    Inicio
+                  </Link>
+                  <span>/</span>
+                  <span className="text-foreground">{category.name}</span>
+                </div>
+                <ProductSearch 
+                  onSearch={handleSearch}
+                  placeholder="Buscar en esta categoría..."
+                  className="max-w-md"
+                />
               </div>
             </div>
           </div>
@@ -152,18 +186,23 @@ const CategoryProducts = () => {
               <div className="mb-6">
                 <h1 className="text-2xl font-bold mb-2">{category.name}</h1>
                 <p className="text-sm text-muted-foreground">
-                  {products.length} {products.length === 1 ? 'producto' : 'productos'}
+                  {searchQuery ? `${filteredProducts.length} resultado${filteredProducts.length !== 1 ? 's' : ''} de ${products.length}` : `${products.length} ${products.length === 1 ? 'producto' : 'productos'}`}
                 </p>
               </div>
 
-              {products.length === 0 ? (
+              {filteredProducts.length === 0 ? (
                 <div className="text-center py-16">
                   <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p className="text-muted-foreground">No hay productos en esta categoría.</p>
+                  <p className="text-muted-foreground">
+                    {searchQuery 
+                      ? `No se encontraron productos que coincidan con "${searchQuery}"`
+                      : "No hay productos en esta categoría."
+                    }
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                  {products.map((product) => (
+                  {filteredProducts.map((product) => (
                     <Link
                       key={product.id}
                       to={`/producto/${product.id}`}
@@ -182,11 +221,11 @@ const CategoryProducts = () => {
                         </div>
                         <CardContent className="p-4">
                           <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                            {product.name || product.title}
+                            {product.title || product.name}
                           </h3>
                           {product.brand && (
-                            <p className="text-xs text-muted-foreground mb-3">
-                              {product.brand}
+                            <p className="text-xs text-muted-foreground mb-2">
+                              Marca: <span className="font-medium">{product.brand}</span>
                             </p>
                           )}
                           <div className="flex items-center justify-between pt-2 border-t border-border/50">

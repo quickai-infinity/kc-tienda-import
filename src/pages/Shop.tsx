@@ -1,14 +1,22 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { CategorySidebar } from "@/components/CategorySidebar";
 import { SidebarToggle } from "@/components/SidebarToggle";
+import { ProductSearch } from "@/components/ProductSearch";
 
 const Shop = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const navigate = useNavigate();
+
+  const handleSearch = (query: string) => {
+    if (query.trim()) {
+      navigate(`/products?search=${encodeURIComponent(query)}`);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -21,6 +29,22 @@ const Shop = () => {
         <main className={`flex-1 overflow-auto transition-all duration-300 ${
           sidebarOpen ? "ml-64 sm:ml-0" : "ml-0"
         }`}>
+          {/* Header with Sidebar Trigger and Search */}
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
+            <div className="container mx-auto px-6 py-3">
+              <div className="flex items-center justify-between gap-4">
+                <h1 className="text-xl font-bold">
+                  Catálogo de Productos
+                </h1>
+                <ProductSearch 
+                  onSearch={handleSearch}
+                  placeholder="Buscar productos..."
+                  className="max-w-md"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Hero Section */}
           <section className="py-16 md:py-24">
             <div className="container mx-auto px-6">
