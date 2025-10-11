@@ -150,8 +150,8 @@ export default function Admin() {
     
     try {
       toast({
-        title: "Starting ELSI Sync",
-        description: "Downloading both catalog files from FTP and syncing to database...",
+        title: "Syncing ELSI catalog…",
+        description: "Fetching CSV files from HTTPS URLs and parsing products...",
       });
 
       const { data, error } = await supabase.functions.invoke(
@@ -163,25 +163,78 @@ export default function Admin() {
 
       if (error) throw error;
 
-      const summary = data?.summary || {};
-      
-      toast({
-        title: "Sync Complete ✅",
-        description: `Inserted: ${summary.inserted || 0} | Updated: ${summary.updated || 0} | Skipped: ${summary.skipped || 0} | Errors: ${summary.errors || 0}`,
-        duration: 10000,
-      });
+      // Handle the new response format: { success, count, products }
+      if (data?.success) {
+        const productCount = data.count || 0;
+        
+        toast({
+          title: "✅ Sync Complete",
+          description: `${productCount.toLocaleString()} products loaded successfully.`,
+          duration: 10000,
+        });
 
-      console.log('Full sync summary:', summary);
+        console.log('ELSI Sync successful:', {
+          count: productCount,
+          sampleProducts: data.products?.slice(0, 3)
+        });
 
-      // Refresh all data
-      await fetchAllData();
+        // Update statistics in real-time
+        setStatistics(prev => {
+          const updated = [...prev];
+          const syncStatIndex = updated.findIndex(s => s.operation === 'sync_elsi_catalog');
+          
+          if (syncStatIndex >= 0) {
+            updated[syncStatIndex] = {
+              ...updated[syncStatIndex],
+              total_runs: (updated[syncStatIndex].total_runs || 0) + 1,
+              successful_runs: (updated[syncStatIndex].successful_runs || 0) + 1,
+              total_records_processed: productCount,
+              last_run: new Date().toISOString()
+            };
+          } else {
+            updated.push({
+              operation: 'sync_elsi_catalog',
+              total_runs: 1,
+              successful_runs: 1,
+              failed_runs: 0,
+              avg_duration_seconds: 0,
+              last_run: new Date().toISOString(),
+              total_records_processed: productCount
+            });
+          }
+          
+          return updated;
+        });
+
+        // Refresh all data from backend
+        await fetchAllData();
+
+      } else {
+        throw new Error(data?.error || 'Sync failed');
+      }
 
     } catch (error: any) {
       console.error('Sync error:', error);
       toast({
-        title: "Sync Failed",
+        title: "❌ Sync Failed",
         description: error.message || "An error occurred during sync",
         variant: "destructive",
+      });
+      
+      // Update failed stats
+      setStatistics(prev => {
+        const updated = [...prev];
+        const syncStatIndex = updated.findIndex(s => s.operation === 'sync_elsi_catalog');
+        
+        if (syncStatIndex >= 0) {
+          updated[syncStatIndex] = {
+            ...updated[syncStatIndex],
+            total_runs: (updated[syncStatIndex].total_runs || 0) + 1,
+            failed_runs: (updated[syncStatIndex].failed_runs || 0) + 1
+          };
+        }
+        
+        return updated;
       });
     } finally {
       setIsLoading(false);
@@ -314,17 +367,17 @@ export default function Admin() {
                 onClick={runElsiSync}
                 disabled={isLoading}
                 size="lg"
-                className="w-full"
+                className={`w-full ${isLoading ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
               >
                 {isLoading ? (
                   <>
-                    <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
-                    Syncing...
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Syncing ELSI catalog…
                   </>
                 ) : (
                   <>
                     <RefreshCw className="mr-2 h-5 w-5" />
-                    Run ELSI Sync Now 🔄
+                    Run ELSI Sync Now
                   </>
                 )}
               </Button>
