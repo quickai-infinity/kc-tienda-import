@@ -1,3 +1,5 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -12,6 +14,13 @@ interface Product {
   price: number;
   stock: number;
   image_url: string;
+}
+
+interface UpsertSummary {
+  inserted: number;
+  updated: number;
+  skipped: number;
+  errors: number;
 }
 
 async function fetchCSV(url: string): Promise<string> {
@@ -130,6 +139,108 @@ function mergeProducts(fullProducts: Product[], dailyProducts: Product[]): Produ
   return mergedProducts;
 }
 
+async function upsertProductsToDatabase(
+  products: Product[],
+  supabaseUrl: string,
+  supabaseServiceKey: string
+): Promise<UpsertSummary> {
+  console.log(`Starting upsert of ${products.length} products to database...`);
+  
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const summary: UpsertSummary = {
+    inserted: 0,
+    updated: 0,
+    skipped: 0,
+    errors: 0
+  };
+
+  // Fetch existing products to determine insert vs update
+  const { data: existingProducts, error: fetchError } = await supabase
+    .from('products')
+    .select('sku, id');
+
+  if (fetchError) {
+    console.error('Error fetching existing products:', fetchError);
+    throw new Error(`Failed to fetch existing products: ${fetchError.message}`);
+  }
+
+  const existingSkuMap = new Map(existingProducts?.map(p => [p.sku, p.id]) || []);
+  console.log(`Found ${existingSkuMap.size} existing products in database`);
+
+  // Process in batches of 100
+  const batchSize = 100;
+  for (let i = 0; i < products.length; i += batchSize) {
+    const batch = products.slice(i, i + batchSize);
+    
+    for (const product of batch) {
+      try {
+        // Skip products without part_number
+        if (!product.part_number) {
+          summary.skipped++;
+          continue;
+        }
+
+        const sku = product.part_number;
+        const existingId = existingSkuMap.get(sku);
+        const priceCents = Math.round(product.price * 100);
+
+        if (existingId) {
+          // UPDATE: Only update price, stock, and image_url (preserve manual edits)
+          const { error: updateError } = await supabase
+            .from('products')
+            .update({
+              price_cents: priceCents,
+              stock: product.stock,
+              image_url: product.image_url || null,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingId);
+
+          if (updateError) {
+            console.error(`Error updating product ${sku}:`, updateError);
+            summary.errors++;
+          } else {
+            summary.updated++;
+          }
+        } else {
+          // INSERT: Create new product with all data from CSV
+          const { error: insertError } = await supabase
+            .from('products')
+            .insert({
+              sku: sku,
+              title: product.description || product.part_number,
+              description: product.description2 || product.description || null,
+              price_cents: priceCents,
+              currency: 'eur',
+              stock: product.stock,
+              image_url: product.image_url || null,
+              category: null, // Will be set manually in Admin
+              brand: product.brand || null,
+              tags: null,
+              active: true // New products are active by default
+            });
+
+          if (insertError) {
+            console.error(`Error inserting product ${sku}:`, insertError);
+            summary.errors++;
+          } else {
+            summary.inserted++;
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing product:`, error);
+        summary.errors++;
+      }
+    }
+
+    // Log progress
+    console.log(`Processed batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(products.length / batchSize)}`);
+  }
+
+  console.log(`Upsert complete - Inserted: ${summary.inserted}, Updated: ${summary.updated}, Skipped: ${summary.skipped}, Errors: ${summary.errors}`);
+  return summary;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -142,9 +253,15 @@ Deno.serve(async (req) => {
     // Get HTTPS URLs from environment
     const fullUrl = Deno.env.get('ELSI_FULL_URL');
     const dailyUrl = Deno.env.get('ELSI_DAILY_URL');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!fullUrl || !dailyUrl) {
       throw new Error('Missing required environment variables: ELSI_FULL_URL or ELSI_DAILY_URL');
+    }
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing Supabase credentials');
     }
 
     console.log('Fetching full catalog...');
@@ -160,12 +277,23 @@ Deno.serve(async (req) => {
 
     console.log(`Successfully processed ${mergedProducts.length} products`);
 
+    // Upsert products to database
+    const summary = await upsertProductsToDatabase(
+      mergedProducts,
+      supabaseUrl,
+      supabaseServiceKey
+    );
+
     // Return JSON response with UTF-8 encoding
     return new Response(
       JSON.stringify({
         success: true,
         count: mergedProducts.length,
-        products: mergedProducts,
+        inserted: summary.inserted,
+        updated: summary.updated,
+        skipped: summary.skipped,
+        errors: summary.errors,
+        products: mergedProducts.slice(0, 10), // Return only first 10 for preview
       }),
       {
         headers: { 

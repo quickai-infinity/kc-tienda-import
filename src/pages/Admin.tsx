@@ -166,18 +166,26 @@ export default function Admin() {
 
       if (error) throw error;
 
-      // Handle the new response format: { success, count, products }
+      // Handle the new response format: { success, count, inserted, updated, skipped, errors }
       if (data?.success) {
         const productCount = data.count || 0;
+        const inserted = data.inserted || 0;
+        const updated = data.updated || 0;
+        const skipped = data.skipped || 0;
+        const errors = data.errors || 0;
         
         toast({
           title: "✅ Sync Complete",
-          description: `${productCount.toLocaleString()} products loaded successfully.`,
+          description: `${productCount.toLocaleString()} products processed. Inserted: ${inserted}, Updated: ${updated}, Skipped: ${skipped}${errors > 0 ? `, Errors: ${errors}` : ''}`,
           duration: 10000,
         });
 
         console.log('ELSI Sync successful:', {
           count: productCount,
+          inserted,
+          updated,
+          skipped,
+          errors,
           sampleProducts: data.products?.slice(0, 3)
         });
 
@@ -367,7 +375,7 @@ export default function Admin() {
                 ELSI Catalog Sync
               </CardTitle>
               <CardDescription>
-                Downloads both ELSI catalog files (daily + hourly updates) and syncs all products to the database
+                Downloads ELSI catalog files (full + daily updates) and automatically syncs all products to the database. Updates price/stock/images while preserving manual edits.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
