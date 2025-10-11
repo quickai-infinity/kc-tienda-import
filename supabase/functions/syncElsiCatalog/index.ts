@@ -23,6 +23,14 @@ interface UpsertSummary {
   updated: number;
   skipped: number;
   errors: number;
+  categoriesCreated: number;
+  categoriesReused: number;
+}
+
+interface CategoryInfo {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 // Utility functions
@@ -34,6 +42,121 @@ function normalizeText(text: string): string {
     .replace(/&nbsp;/g, ' ')       // Replace &nbsp; with space
     .replace(/\s+/g, ' ')          // Replace multiple spaces with single space
     .trim();
+}
+
+function normalizeCategoryText(text: string): string {
+  if (!text) return '';
+  return text
+    .toString()
+    .trim()
+    .replace(/\s+/g, ' ')
+    // Capitalize first letter of each word
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function createSlug(text: string): string {
+  if (!text) return '';
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .trim();
+}
+
+async function findOrCreateCategory(
+  supabase: any,
+  categoryName: string,
+  categoryCache: Map<string, CategoryInfo>
+): Promise<CategoryInfo | null> {
+  if (!categoryName) return null;
+  
+  // Check cache first
+  if (categoryCache.has(categoryName)) {
+    return categoryCache.get(categoryName)!;
+  }
+  
+  const slug = createSlug(categoryName);
+  
+  // Try to find existing category
+  const { data: existing, error: findError } = await supabase
+    .from('categories')
+    .select('id, name, slug')
+    .eq('slug', slug)
+    .maybeSingle();
+  
+  if (findError) {
+    console.error(`Error finding category ${categoryName}:`, findError);
+    return null;
+  }
+  
+  if (existing) {
+    categoryCache.set(categoryName, existing);
+    return existing;
+  }
+  
+  // Create new category
+  const { data: newCategory, error: insertError } = await supabase
+    .from('categories')
+    .insert({
+      name: categoryName,
+      slug: slug,
+      description: 'Categoría importada automáticamente desde el catálogo ELSI'
+    })
+    .select('id, name, slug')
+    .single();
+  
+  if (insertError) {
+    console.error(`Error creating category ${categoryName}:`, insertError);
+    return null;
+  }
+  
+  if (newCategory) {
+    categoryCache.set(categoryName, newCategory);
+  }
+  
+  return newCategory;
+}
+
+function buildHierarchicalCategory(rowData: Record<string, string>): string {
+  const parts: string[] = [];
+  
+  // Priority 1: Nombre de familia (main category)
+  const familia = normalizeCategoryText(
+    rowData['Nombre de familia'] ||
+    rowData['Nombre De Familia'] ||
+    rowData['familia'] ||
+    rowData['Familia'] ||
+    ''
+  );
+  
+  // Priority 2: Subfamilia
+  const subfamilia = normalizeCategoryText(
+    rowData['Subfamilia'] ||
+    rowData['subfamilia'] ||
+    rowData['Nombre subfamilia'] ||
+    rowData['Nombre Subfamilia'] ||
+    ''
+  );
+  
+  // Priority 3: Categoría
+  const categoria = normalizeCategoryText(
+    rowData['Categoría'] ||
+    rowData['Categoria'] ||
+    rowData['categoria'] ||
+    ''
+  );
+  
+  if (familia) parts.push(familia);
+  if (subfamilia && subfamilia !== familia) parts.push(subfamilia);
+  if (categoria && categoria !== subfamilia && categoria !== familia) parts.push(categoria);
+  
+  return parts.length > 0 ? parts.join(' / ') : '';
 }
 
 interface UpsertSummary {
@@ -118,35 +241,26 @@ function detectCategoryFromDescription(description: string): string {
 }
 
 function assignCategory(rowData: Record<string, string>): string {
-  // Priority 1: Nombre de familia (exact ELSI column name)
-  let category = 
-    rowData['Nombre de familia'] ||
-    rowData['familia'] || 
-    rowData['Familia'] ||
+  // Build hierarchical category from ELSI columns
+  const hierarchical = buildHierarchicalCategory(rowData);
+  
+  if (hierarchical) {
+    return hierarchical;
+  }
+  
+  // Fallback: Auto-detect from descripción
+  const description = 
+    rowData['Descripción'] ||
+    rowData['descripcion'] || 
+    rowData['descripción'] || 
     '';
   
-  // Priority 2: subfamilia or categoria
-  if (!category) {
-    category = 
-      rowData['Nombre subfamilia'] ||
-      rowData['subfamilia'] || 
-      rowData['Subfamilia'] ||
-      rowData['categoria'] || 
-      rowData['Categoria'] ||
-      '';
+  if (description) {
+    const detected = detectCategoryFromDescription(description);
+    return detected ? normalizeCategoryText(detected) : '';
   }
   
-  // Priority 3: Auto-detect from descripción
-  if (!category) {
-    const description = 
-      rowData['Descripción'] ||
-      rowData['descripcion'] || 
-      rowData['descripción'] || 
-      '';
-    category = detectCategoryFromDescription(description);
-  }
-  
-  return normalizeCategory(category);
+  return '';
 }
 
 function parseCSV(csvContent: string): Product[] {
@@ -325,8 +439,25 @@ async function upsertProductsToDatabase(
     inserted: 0,
     updated: 0,
     skipped: 0,
-    errors: 0
+    errors: 0,
+    categoriesCreated: 0,
+    categoriesReused: 0
   };
+  
+  // Category cache to avoid repeated lookups
+  const categoryCache = new Map<string, CategoryInfo>();
+  
+  // Pre-load existing categories
+  const { data: existingCategories } = await supabase
+    .from('categories')
+    .select('id, name, slug');
+  
+  if (existingCategories) {
+    existingCategories.forEach((cat: CategoryInfo) => {
+      categoryCache.set(cat.name, cat);
+    });
+    console.log(`Pre-loaded ${existingCategories.length} existing categories`);
+  }
 
   // Fetch existing products to determine insert vs update (include image_url to preserve manual uploads)
   const { data: existingProducts, error: fetchError } = await supabase
@@ -367,6 +498,25 @@ async function upsertProductsToDatabase(
         const sku = product.part_number;
         const existingProduct = existingProductMap.get(sku);
         
+        // Handle category assignment
+        let categoryId: string | null = null;
+        const categoryName = product.category;
+        
+        if (categoryName) {
+          const existingCategoryCount = categoryCache.size;
+          const categoryInfo = await findOrCreateCategory(supabase, categoryName, categoryCache);
+          
+          if (categoryInfo) {
+            categoryId = categoryInfo.id;
+            // Track if we created a new category
+            if (categoryCache.size > existingCategoryCount) {
+              summary.categoriesCreated++;
+            } else {
+              summary.categoriesReused++;
+            }
+          }
+        }
+        
         // Price calculations:
         // 1. Base price from CSV (in cents)
         const priceBaseCents = Math.round(product.price * 100);
@@ -390,6 +540,8 @@ async function upsertProductsToDatabase(
             price_base: priceBaseCents,
             price_cents: priceFinalCents,
             stock: product.stock,
+            category: categoryName || null,
+            category_id: categoryId,
             updated_at: new Date().toISOString()
           };
           
@@ -448,7 +600,8 @@ async function upsertProductsToDatabase(
               currency: 'eur',
               stock: product.stock,
               image_url: product.image_url || null,
-              category: product.category || null,
+              category: categoryName || null,
+              category_id: categoryId,
               brand: product.brand || null,
               tags: null,
               active: true,
@@ -473,6 +626,7 @@ async function upsertProductsToDatabase(
   }
 
   console.log(`Upsert complete - Inserted: ${summary.inserted}, Updated: ${summary.updated}, Skipped: ${summary.skipped}, Errors: ${summary.errors}`);
+  console.log(`Categories - Created: ${summary.categoriesCreated}, Reused: ${summary.categoriesReused}`);
   console.log(`Featured products set: ${featuredCount}`);
   console.log(`Products with valid images: ${productsWithValidImages}`);
   console.log(`Manual images preserved: ${manualImagesPreserved}`);
@@ -557,6 +711,8 @@ Deno.serve(async (req) => {
         updated: summary.updated,
         skipped: summary.skipped,
         errors: summary.errors,
+        categoriesCreated: summary.categoriesCreated,
+        categoriesReused: summary.categoriesReused,
         products: mergedProducts.slice(0, 10), // Return only first 10 for preview
       }),
       {

@@ -53,6 +53,44 @@ export type Database = {
         }
         Relationships: []
       }
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       elsi_catalog_temp: {
         Row: {
           brand: string | null
@@ -121,6 +159,7 @@ export type Database = {
           active: boolean | null
           brand: string | null
           category: string | null
+          category_id: string | null
           created_at: string | null
           currency: string
           description: string | null
@@ -141,6 +180,7 @@ export type Database = {
           active?: boolean | null
           brand?: string | null
           category?: string | null
+          category_id?: string | null
           created_at?: string | null
           currency?: string
           description?: string | null
@@ -161,6 +201,7 @@ export type Database = {
           active?: boolean | null
           brand?: string | null
           category?: string | null
+          category_id?: string | null
           created_at?: string | null
           currency?: string
           description?: string | null
@@ -177,7 +218,15 @@ export type Database = {
           title?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sync_metrics: {
         Row: {
