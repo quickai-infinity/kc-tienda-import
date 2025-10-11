@@ -1,7 +1,7 @@
 project_id = "uwvhieodebkjwuedtcut"
 
 [functions.syncElsiCatalog]
-verify_jwt = true
+verify_jwt = false
 
 [functions.fetchElsiCatalog]
 verify_jwt = true
