@@ -202,14 +202,32 @@ function parseCSV(csvContent: string): Product[] {
     const validatedImageUrl = validateImageUrl(rawImageUrl);
     
     // Map ELSI CSV fields to Product interface
+    // ELSI CSV columns: descripcion_principal, descripcion_secundaria, marca, part_number, precio, stock, imagen
     const product: Product = {
-      name: cleanText(rowData['descripcion_principal'] || rowData['descripcion'] || rowData['descripción'] || ''),
+      name: cleanText(
+        rowData['descripcion_principal'] || 
+        rowData['descripcionprincipal'] ||
+        rowData['descripcion'] || 
+        rowData['descripción'] || 
+        ''
+      ),
       brand: cleanText(rowData['marca'] || ''),
       part_number: partNumber,
-      description: cleanText(rowData['descripcion_secundaria'] || rowData['descripcion 2'] || ''),
-      description2: cleanText(rowData['descripcion_secundaria'] || rowData['descripcion 2'] || ''),
-      barcode: cleanText(rowData['cod. barras'] || rowData['barcode'] || ''),
-      price: parseFloat(rowData['precio'] || '0'),
+      description: cleanText(
+        rowData['descripcion_secundaria'] || 
+        rowData['descripcionsecundaria'] ||
+        rowData['descripcion 2'] ||
+        rowData['descripcion2'] ||
+        ''
+      ),
+      description2: cleanText(
+        rowData['descripcion_secundaria'] || 
+        rowData['descripcionsecundaria'] ||
+        rowData['descripcion 2'] ||
+        ''
+      ),
+      barcode: cleanText(rowData['cod. barras'] || rowData['barcode'] || rowData['codigo_barras'] || ''),
+      price: parseFloat(rowData['precio'] || rowData['price'] || '0'),
       stock: parseInt(rowData['stock'] || '0', 10),
       image_url: validatedImageUrl || '',
       category: assignCategory(rowData),
@@ -420,10 +438,18 @@ async function upsertProductsToDatabase(
   
   // Log first 3 entries for verification
   if (products.length > 0) {
-    console.log('Sample products (first 3):');
+    console.log('\n=== Sample Products (First 3) ===');
     products.slice(0, 3).forEach((p: Product, i: number) => {
-      console.log(`  ${i + 1}. Name: "${p.name}", Brand: "${p.brand}", Image: "${p.image_url || 'N/A'}"`);
+      console.log(`\nProduct ${i + 1}:`);
+      console.log(`  Name: "${p.name || 'N/A'}"`);
+      console.log(`  Brand: "${p.brand || 'N/A'}"`);
+      console.log(`  SKU: "${p.part_number || 'N/A'}"`);
+      console.log(`  Price Base: ${p.price} EUR`);
+      console.log(`  Stock: ${p.stock}`);
+      console.log(`  Image: "${p.image_url || 'N/A'}"`);
+      console.log(`  Category: "${p.category || 'N/A'}"`);
     });
+    console.log('\n=====================================\n');
   }
   
   // Log category distribution

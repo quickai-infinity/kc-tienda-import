@@ -178,7 +178,7 @@ const ProductDetail = () => {
               {product.description && (
                 <div>
                   <h2 className="text-xl font-semibold mb-3">Descripción</h2>
-                  <p className="text-muted-foreground leading-relaxed">
+                  <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
                     {product.description}
                   </p>
                 </div>
@@ -187,10 +187,12 @@ const ProductDetail = () => {
               {/* Product Details */}
               <Card>
                 <CardContent className="p-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">SKU:</span>
-                    <span className="font-medium">{product.sku}</span>
-                  </div>
+                  {product.sku && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">SKU:</span>
+                      <span className="font-medium">{product.sku}</span>
+                    </div>
+                  )}
                   {product.brand && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Marca:</span>
