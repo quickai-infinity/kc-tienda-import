@@ -115,14 +115,14 @@ const ProductDetail = () => {
           <div className="grid md:grid-cols-2 gap-8">
             {/* Product Image */}
             <div className="relative">
-              <Card className="overflow-hidden">
+              <Card className="overflow-hidden shadow-md">
                 <div className="aspect-square bg-muted">
                   <img
-                    src={product.image_url || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80"}
+                    src={product.image_url || "/assets/no-image.png"}
                     alt={product.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-xl"
                     onError={(e) => {
-                      e.currentTarget.src = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80";
+                      e.currentTarget.src = "/assets/no-image.png";
                     }}
                   />
                 </div>

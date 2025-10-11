@@ -42,21 +42,25 @@ function validateImageUrl(url: string): string | null {
   
   const trimmedUrl = url.trim();
   
-  // Check if it's a valid HTTP/HTTPS URL
-  if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
-    return null;
+  // If it's already a full URL, validate it
+  if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+    // Check if it contains ELSI logo or placeholder patterns
+    const lowerUrl = trimmedUrl.toLowerCase();
+    if (lowerUrl.includes('elsi') && lowerUrl.includes('logo')) {
+      return null;
+    }
+    if (lowerUrl.includes('placeholder') || lowerUrl.includes('no-image')) {
+      return null;
+    }
+    return trimmedUrl;
   }
   
-  // Check if it contains ELSI logo or placeholder patterns
-  const lowerUrl = trimmedUrl.toLowerCase();
-  if (lowerUrl.includes('elsi') && lowerUrl.includes('logo')) {
-    return null;
-  }
-  if (lowerUrl.includes('placeholder') || lowerUrl.includes('no-image')) {
-    return null;
+  // If it's a relative path, prepend ELSI base URL
+  if (trimmedUrl.length > 0 && !trimmedUrl.startsWith('http')) {
+    return `https://www.elsi.es/imagenes/${trimmedUrl}`;
   }
   
-  return trimmedUrl;
+  return null;
 }
 
 function normalizeCategory(category: string): string {
@@ -168,7 +172,15 @@ function parseCSV(csvContent: string): Product[] {
     }
     
     // Extract and validate image URL from multiple possible columns
-    const rawImageUrl = rowData['imagen'] || rowData['image'] || rowData['url_imagen'] || rowData['fotografia'] || '';
+    const rawImageUrl = 
+      rowData['imagen'] || 
+      rowData['urlimagen'] || 
+      rowData['url_imagen'] || 
+      rowData['image'] || 
+      rowData['img'] || 
+      rowData['photo'] || 
+      rowData['fotografia'] || 
+      '';
     const validatedImageUrl = validateImageUrl(rawImageUrl);
     
     const product: Product = {
@@ -381,6 +393,7 @@ async function upsertProductsToDatabase(
   console.log(`Featured products set: ${featuredCount}`);
   console.log(`Products with valid images: ${productsWithValidImages}`);
   console.log(`Manual images preserved: ${manualImagesPreserved}`);
+  console.log(`Image URL detection: Found ${productsWithValidImages} products with valid image URLs out of ${summary.inserted + summary.updated} processed`);
   
   // Log category distribution
   console.log('Category distribution:');

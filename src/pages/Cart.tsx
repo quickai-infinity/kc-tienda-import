@@ -57,9 +57,12 @@ const Cart = () => {
                 <CardContent className="p-6">
                   <div className="flex gap-4">
                     <img
-                      src={item.image_url || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80"}
+                      src={item.image_url || "/assets/no-image.png"}
                       alt={item.title}
-                      className="w-24 h-24 object-cover rounded-lg"
+                      className="w-24 h-24 object-cover rounded-lg shadow-md"
+                      onError={(e) => {
+                        e.currentTarget.src = "/assets/no-image.png";
+                      }}
                     />
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg">{item.title}</h3>

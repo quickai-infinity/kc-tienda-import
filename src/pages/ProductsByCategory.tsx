@@ -120,13 +120,13 @@ const ProductsByCategory = () => {
                         <img
                           src={
                             product.image_url ||
-                            "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80"
+                            "/assets/no-image.png"
                           }
                           alt={product.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 rounded-t-xl shadow-md"
                           onError={(e) => {
                             e.currentTarget.src =
-                              "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80";
+                              "/assets/no-image.png";
                           }}
                         />
                         <div className="absolute top-4 right-4">
