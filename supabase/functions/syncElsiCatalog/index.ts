@@ -337,16 +337,20 @@ function parseCSV(csvContent: string): Product[] {
     const validatedImageUrl = validateImageUrl(rawImageUrl);
     
     // Map ELSI CSV fields to Product interface with exact column names
+    // Priority order for product name: Descripción, Descripcion web, Descripcion corta, titulo, then SKU as fallback
     const product: Product = {
       name: normalizeText(
         rowData['Descripción'] ||
-        rowData['descripcion'] || 
-        rowData['Descripcion'] ||
-        rowData['descripcion_principal'] || 
-        rowData['descripcionprincipal'] ||
+        rowData['Descripcion'] || 
+        rowData['descripcion'] ||
+        rowData['Descripcion web'] ||
+        rowData['Descripción web'] ||
+        rowData['Descripcion corta'] ||
+        rowData['Descripción corta'] ||
         rowData['titulo'] ||
+        partNumber || // Use SKU as fallback
         ''
-      ) || 'Sin nombre',
+      ) || partNumber || 'Sin nombre',
       brand: normalizeText(
         rowData['Marca'] ||
         rowData['marca'] || 

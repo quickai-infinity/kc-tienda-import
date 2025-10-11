@@ -15,6 +15,7 @@ import Auth from "./pages/Auth";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import ProductsByCategory from "./pages/ProductsByCategory";
+import CategoryProducts from "./pages/CategoryProducts";
 import Shop from "./pages/Shop";
 import About from "./pages/About";
 import Blog from "./pages/Blog";
@@ -35,6 +36,7 @@ console.log("Registered routes:", [
   "/products",
   "/productos/:category",
   "/producto/:id",
+  "/categoria/:slug",
   "/shop",
   "/about",
   "/blog",
@@ -62,6 +64,7 @@ const App = () => (
               <Route path="/products" element={<Products />} />
               <Route path="/productos/:category" element={<ProductsByCategory />} />
               <Route path="/producto/:id" element={<ProductDetail />} />
+              <Route path="/categoria/:slug" element={<CategoryProducts />} />
               <Route path="/shop" element={<Shop />} />
               <Route path="/about" element={<About />} />
               <Route path="/blog" element={<Blog />} />
