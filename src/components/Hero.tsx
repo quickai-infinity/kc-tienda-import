@@ -2,11 +2,42 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 import logo from "@/assets/logo.png";
 import heroImage from "@/assets/hero-tech.jpg";
 
 export const Hero = () => {
   const { t } = useLanguage();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleCheckout = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: { origin: window.location.origin }
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo iniciar el proceso de pago. Por favor, inténtalo de nuevo.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+  };
 
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
@@ -37,12 +68,15 @@ export const Hero = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-slide-up" style={{ animationDelay: "0.2s" }}>
-            <Link to="/shop">
-              <Button size="lg" className="group bg-accent hover:bg-accent/90 text-accent-foreground">
-                {t("hero.shopNow")}
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
+            <Button 
+              size="lg" 
+              className="group bg-accent hover:bg-accent/90 text-accent-foreground"
+              onClick={handleCheckout}
+              disabled={isLoading}
+            >
+              {isLoading ? "Procesando..." : t("hero.shopNow")}
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            </Button>
             <Link to="/products">
               <Button size="lg" variant="outline" className="group">
                 {t("hero.exploreProducts")}
