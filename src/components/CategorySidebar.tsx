@@ -1,21 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Package, Plus, Minus } from "lucide-react";
+import { Loader2, Plus, Minus } from "lucide-react";
 import { toast } from "sonner";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Category {
@@ -25,15 +12,66 @@ interface Category {
   description: string | null;
   parent_id: string | null;
   product_count?: number;
-  children?: Category[];
 }
 
+interface CategoryGroup {
+  id: string;
+  name: string;
+  categories: Category[];
+  keywords: string[];
+}
+
+// Predefined category groups matching ELSI structure
+const CATEGORY_GROUPS: CategoryGroup[] = [
+  { id: "tpv", name: "Punto De Venta", categories: [], keywords: ["tpv", "punto de venta", "pos"] },
+  { id: "impresoras", name: "Impresoras", categories: [], keywords: ["impresora", "ticket", "etiqueta"] },
+  { id: "movilidad", name: "Movilidad", categories: [], keywords: ["movilidad", "pda", "móvil", "movil", "tablet"] },
+  { id: "scanners", name: "Scanners", categories: [], keywords: ["scanner", "escáner", "escanear"] },
+  { id: "panel-pcs", name: "Panel PCs", categories: [], keywords: ["panel pc"] },
+  { id: "box-pc", name: "Box PC", categories: [], keywords: ["box pc", "mini pc"] },
+  { id: "monitores", name: "Monitores", categories: [], keywords: ["monitor", "pantalla", "display"] },
+  { id: "software", name: "Software", categories: [], keywords: ["software", "programa", "aplicación"] },
+  { id: "identificacion", name: "Identificación / Biometría", categories: [], keywords: ["identificación", "identificacion", "biometría", "biometria", "huella"] },
+  { id: "otros", name: "Más Productos", categories: [], keywords: [] }, // Catch-all
+];
+
 export function CategorySidebar() {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [groupedCategories, setGroupedCategories] = useState<CategoryGroup[]>([]);
   const [loading, setLoading] = useState(true);
-  const { open } = useSidebar();
+  const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const location = useLocation();
-  const collapsed = !open;
+
+  // Group categories by predefined groups
+  const groupCategories = (categories: Category[]): CategoryGroup[] => {
+    const groups = CATEGORY_GROUPS.map(g => ({ ...g, categories: [] as Category[] }));
+    
+    categories.forEach(category => {
+      const categoryName = category.name.toLowerCase();
+      let matched = false;
+      
+      // Try to match with each group's keywords
+      for (const group of groups) {
+        if (group.id === "otros") continue; // Skip catch-all for now
+        
+        if (group.keywords.some(keyword => categoryName.includes(keyword))) {
+          group.categories.push(category);
+          matched = true;
+          break;
+        }
+      }
+      
+      // If no match, add to "Más Productos"
+      if (!matched) {
+        const otrosGroup = groups.find(g => g.id === "otros");
+        if (otrosGroup) {
+          otrosGroup.categories.push(category);
+        }
+      }
+    });
+    
+    // Filter out empty groups
+    return groups.filter(g => g.categories.length > 0);
+  };
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -46,7 +84,7 @@ export function CategorySidebar() {
         if (categoriesError) throw categoriesError;
 
         if (!categoriesData || categoriesData.length === 0) {
-          setCategories([]);
+          setGroupedCategories([]);
           setLoading(false);
           return;
         }
@@ -64,33 +102,20 @@ export function CategorySidebar() {
           })
         );
 
-        // Build tree structure
-        const categoryMap = new Map<string, Category>();
-        categoriesWithCounts.forEach(cat => {
-          categoryMap.set(cat.id, { ...cat, children: [] });
-        });
-
-        const rootCategories: Category[] = [];
-        categoriesWithCounts.forEach(cat => {
-          const category = categoryMap.get(cat.id)!;
-          if (cat.parent_id && categoryMap.has(cat.parent_id)) {
-            categoryMap.get(cat.parent_id)!.children!.push(category);
-          } else {
-            rootCategories.push(category);
-          }
-        });
-
         // Filter categories with products
-        const filterEmpty = (cats: Category[]): Category[] => {
-          return cats
-            .filter(cat => (cat.product_count || 0) > 0 || (cat.children && cat.children.length > 0))
-            .map(cat => ({
-              ...cat,
-              children: cat.children ? filterEmpty(cat.children) : []
-            }));
-        };
-
-        setCategories(filterEmpty(rootCategories));
+        const categoriesWithProducts = categoriesWithCounts.filter(cat => (cat.product_count || 0) > 0);
+        
+        // Group categories
+        const grouped = groupCategories(categoriesWithProducts);
+        setGroupedCategories(grouped);
+        
+        // Auto-open group with active category
+        const activeGroup = grouped.find(group => 
+          group.categories.some(cat => location.pathname === `/categoria/${cat.slug}`)
+        );
+        if (activeGroup) {
+          setOpenGroupId(activeGroup.id);
+        }
       } catch (error) {
         console.error('Error fetching categories:', error);
         toast.error("Error al cargar las categorías");
@@ -100,112 +125,97 @@ export function CategorySidebar() {
     };
 
     fetchCategories();
-  }, []);
+  }, [location.pathname]);
 
   const isActive = (slug: string) => location.pathname === `/categoria/${slug}`;
-
-  const renderCategory = (category: Category, level: number = 0) => {
-    const hasChildren = category.children && category.children.length > 0;
-    const active = isActive(category.slug);
-    const shouldDefaultOpen = category.children?.some(c => isActive(c.slug)) || false;
-
-    if (hasChildren) {
-      return (
-        <Collapsible key={category.id} defaultOpen={shouldDefaultOpen}>
-          <SidebarMenuItem>
-            <div className="flex items-center w-full gap-1">
-              {!collapsed && (
-                <CollapsibleTrigger className="p-1 hover:bg-accent/50 rounded flex-shrink-0 transition-colors [&[data-state=open]>svg.plus]:hidden [&[data-state=closed]>svg.minus]:hidden">
-                  <Plus className="h-3.5 w-3.5 plus text-muted-foreground" />
-                  <Minus className="h-3.5 w-3.5 minus text-muted-foreground" />
-                </CollapsibleTrigger>
-              )}
-              <SidebarMenuButton 
-                asChild={category.product_count ? category.product_count > 0 : false}
-                className={`flex-1 h-8 ${active ? "bg-primary/10 text-primary font-medium border-l-2 border-primary" : "text-foreground/80 hover:text-foreground hover:bg-accent/30"}`}
-              >
-                {category.product_count && category.product_count > 0 ? (
-                  <Link to={`/categoria/${category.slug}`} className="flex items-center justify-between w-full">
-                    <span className="truncate text-[13px]">{category.name}</span>
-                    {!collapsed && (
-                      <Badge variant="secondary" className="ml-2 flex-shrink-0 text-[10px] px-1.5 py-0 h-5 bg-accent/50">
-                        {category.product_count}
-                      </Badge>
-                    )}
-                  </Link>
-                ) : (
-                  <div className="flex items-center justify-between w-full">
-                    <span className="truncate text-[13px] font-medium">{category.name}</span>
-                  </div>
-                )}
-              </SidebarMenuButton>
-            </div>
-            <CollapsibleContent className="transition-all duration-200">
-              <SidebarMenu className={`ml-4 mt-0.5 space-y-0.5 ${!collapsed ? 'border-l border-border/50 pl-2' : ''}`}>
-                {category.children?.map(child => renderCategory(child, level + 1))}
-              </SidebarMenu>
-            </CollapsibleContent>
-          </SidebarMenuItem>
-        </Collapsible>
-      );
-    }
-
-    return (
-      <SidebarMenuItem key={category.id}>
-        <SidebarMenuButton 
-          asChild 
-          className={`h-8 ${active ? "bg-primary/10 text-primary font-medium border-l-2 border-primary" : "text-foreground/80 hover:text-foreground hover:bg-accent/30"}`}
-        >
-          <Link to={`/categoria/${category.slug}`} className="flex items-center justify-between w-full">
-            <span className="truncate text-[13px]">{category.name}</span>
-            {!collapsed && category.product_count && category.product_count > 0 && (
-              <Badge variant="secondary" className="ml-2 flex-shrink-0 text-[10px] px-1.5 py-0 h-5 bg-accent/50">
-                {category.product_count}
-              </Badge>
-            )}
-          </Link>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    );
+  
+  const toggleGroup = (groupId: string) => {
+    setOpenGroupId(openGroupId === groupId ? null : groupId);
   };
 
   if (loading) {
     return (
-      <Sidebar>
-        <SidebarContent>
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
-        </SidebarContent>
-      </Sidebar>
+      <aside className="fixed left-0 top-[64px] bottom-0 w-64 lg:w-64 md:w-64 sm:w-full bg-background border-r border-border/50 shadow-xl overflow-y-auto">
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      </aside>
     );
   }
 
   return (
-    <Sidebar className="border-r border-border/50 shadow-lg">
+    <aside className="fixed left-0 top-[64px] bottom-0 w-64 lg:w-64 md:w-64 sm:w-full bg-background border-r border-border/50 shadow-xl z-40 overflow-hidden">
       <ScrollArea className="h-full">
-        <SidebarContent className="py-3">
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-[11px] uppercase tracking-widest font-bold px-3 mb-3 text-muted-foreground/70">
+        <div className="py-4">
+          {/* Fixed Header */}
+          <div className="px-4 mb-4 border-b border-border/30 pb-3">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-foreground/80">
               Productos
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="space-y-0.5 px-2">
-                {categories.length === 0 ? (
-                  <div className="text-center py-8 px-4">
-                    <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-                    <p className="text-xs text-muted-foreground/70">
-                      No hay categorías disponibles
-                    </p>
+            </h2>
+          </div>
+          
+          {/* Category Groups */}
+          <div className="space-y-0">
+            {groupedCategories.length === 0 ? (
+              <div className="text-center py-8 px-4">
+                <p className="text-xs text-muted-foreground">
+                  No hay categorías disponibles
+                </p>
+              </div>
+            ) : (
+              groupedCategories.map((group) => {
+                const isOpen = openGroupId === group.id;
+                const hasActiveCategory = group.categories.some(cat => isActive(cat.slug));
+                
+                return (
+                  <div key={group.id} className="border-b border-border/20 last:border-0">
+                    {/* Group Header */}
+                    <button
+                      onClick={() => toggleGroup(group.id)}
+                      className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-all ${
+                        hasActiveCategory 
+                          ? "text-primary font-medium bg-primary/5" 
+                          : "text-foreground/80 hover:text-foreground hover:bg-accent/30"
+                      }`}
+                    >
+                      <span className="text-left">{group.name}</span>
+                      <span className="ml-auto flex-shrink-0">
+                        {isOpen ? (
+                          <Minus className="h-3.5 w-3.5" />
+                        ) : (
+                          <Plus className="h-3.5 w-3.5" />
+                        )}
+                      </span>
+                    </button>
+                    
+                    {/* Subcategories */}
+                    {isOpen && (
+                      <div className="bg-background/30 py-1">
+                        {group.categories.map((category) => {
+                          const active = isActive(category.slug);
+                          return (
+                            <Link
+                              key={category.id}
+                              to={`/categoria/${category.slug}`}
+                              className={`block px-8 py-2.5 text-[13px] transition-all ${
+                                active
+                                  ? "text-primary font-medium bg-primary/10 border-l-3 border-primary"
+                                  : "text-foreground/70 hover:text-foreground hover:bg-accent/20"
+                              }`}
+                            >
+                              <span className="line-clamp-1">{category.name}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  categories.map(category => renderCategory(category))
-                )}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
+                );
+              })
+            )}
+          </div>
+        </div>
       </ScrollArea>
-    </Sidebar>
+    </aside>
   );
 }

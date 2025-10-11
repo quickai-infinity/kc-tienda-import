@@ -3,15 +3,13 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
-import { Loader2, ShoppingCart, Package } from "lucide-react";
+import { Loader2, Package } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "@/lib/formatPrice";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { CategorySidebar } from "@/components/CategorySidebar";
 
 interface Product {
@@ -89,14 +87,12 @@ const CategoryProducts = () => {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <SidebarProvider defaultOpen={true}>
-          <div className="flex-1 flex w-full">
-            <CategorySidebar />
-            <div className="flex-1 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+        <div className="flex-1 flex">
+          <CategorySidebar />
+          <div className="flex-1 ml-64 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        </SidebarProvider>
+        </div>
         <Footer />
       </div>
     );
@@ -106,14 +102,12 @@ const CategoryProducts = () => {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <SidebarProvider defaultOpen={true}>
-          <div className="flex-1 flex w-full">
-            <CategorySidebar />
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-muted-foreground/70">Categoría no encontrada</p>
-            </div>
+        <div className="flex-1 flex">
+          <CategorySidebar />
+          <div className="flex-1 ml-64 flex items-center justify-center">
+            <p className="text-muted-foreground">Categoría no encontrada</p>
           </div>
-        </SidebarProvider>
+        </div>
         <Footer />
       </div>
     );
@@ -123,96 +117,91 @@ const CategoryProducts = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <SidebarProvider defaultOpen={true}>
-        <div className="flex-1 flex w-full">
-          <CategorySidebar />
-          
-          <main className="flex-1 overflow-auto bg-background">
-            {/* Header with Sidebar Trigger and Breadcrumb */}
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
-              <div className="container mx-auto px-6 py-3 flex items-center gap-4">
-                <SidebarTrigger className="lg:hidden" />
-                <div className="flex items-center gap-2 text-sm text-muted-foreground/70">
-                  <Link to="/" className="hover:text-primary transition-colors">Inicio</Link>
-                  <span>/</span>
-                  <span className="text-foreground/90 font-medium">{category.name}</span>
-                </div>
+      <div className="flex-1 flex">
+        <CategorySidebar />
+        
+        <main className="flex-1 ml-64 sm:ml-0 overflow-auto">
+          {/* Breadcrumb */}
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
+            <div className="container mx-auto px-6 py-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Link to="/" className="hover:text-foreground transition-colors">
+                  Inicio
+                </Link>
+                <span>/</span>
+                <span className="text-foreground">{category.name}</span>
               </div>
             </div>
+          </div>
 
-            {/* Products Section */}
-            <section className="py-6">
-              <div className="container mx-auto px-6">
-                {/* Category Title */}
-                <div className="mb-6">
-                  <h1 className="text-2xl font-bold mb-2 text-foreground/90">{category.name}</h1>
-                  <p className="text-sm text-muted-foreground/70">
-                    {products.length} {products.length === 1 ? 'producto' : 'productos'}
-                  </p>
-                </div>
-
-                {loading ? (
-                  <div className="flex justify-center items-center py-16">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                ) : products.length === 0 ? (
-                  <div className="text-center py-16">
-                    <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <p className="text-muted-foreground/70">No hay productos en esta categoría.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                    {products.map((product) => (
-                      <Link
-                        key={product.id}
-                        to={`/producto/${product.id}`}
-                        className="group"
-                      >
-                        <Card className="overflow-hidden hover:shadow-xl hover:border-primary/20 transition-all duration-300 h-full flex flex-col">
-                          <div className="aspect-square overflow-hidden bg-muted/50">
-                            <img
-                              src={product.image_url || "/assets/no-image.png"}
-                              alt={product.name || product.title}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                              onError={(e) => {
-                                e.currentTarget.src = "/assets/no-image.png";
-                              }}
-                            />
-                          </div>
-                          <CardContent className="p-4 flex-1 flex flex-col">
-                            <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                              {product.name || product.title}
-                            </h3>
-                            {product.brand && (
-                              <p className="text-xs text-muted-foreground/70 mb-3">
-                                {product.brand}
-                              </p>
-                            )}
-                            <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
-                              <span className="text-lg font-bold text-primary">
-                                {formatPrice(product.price_cents)}
-                              </span>
-                              {product.stock > 0 ? (
-                                <Badge variant="secondary" className="bg-primary/10 text-primary text-[10px] h-5">
-                                  En stock
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="bg-destructive/10 text-destructive text-[10px] h-5">
-                                  Agotado
-                                </Badge>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    ))}
-                  </div>
-                )}
+          {/* Products Section */}
+          <section className="py-6">
+            <div className="container mx-auto px-6">
+              {/* Category Title */}
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold mb-2">{category.name}</h1>
+                <p className="text-sm text-muted-foreground">
+                  {products.length} {products.length === 1 ? 'producto' : 'productos'}
+                </p>
               </div>
-            </section>
-          </main>
-        </div>
-      </SidebarProvider>
+
+              {products.length === 0 ? (
+                <div className="text-center py-16">
+                  <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="text-muted-foreground">No hay productos en esta categoría.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                  {products.map((product) => (
+                    <Link
+                      key={product.id}
+                      to={`/producto/${product.id}`}
+                      className="group"
+                    >
+                      <Card className="overflow-hidden hover:shadow-xl hover:border-primary/20 transition-all duration-300 h-full">
+                        <div className="aspect-square overflow-hidden bg-muted/50">
+                          <img
+                            src={product.image_url || "/assets/no-image.png"}
+                            alt={product.name || product.title}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            onError={(e) => {
+                              e.currentTarget.src = "/assets/no-image.png";
+                            }}
+                          />
+                        </div>
+                        <CardContent className="p-4">
+                          <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                            {product.name || product.title}
+                          </h3>
+                          {product.brand && (
+                            <p className="text-xs text-muted-foreground mb-3">
+                              {product.brand}
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                            <span className="text-lg font-bold text-primary">
+                              {formatPrice(product.price_cents)}
+                            </span>
+                            {product.stock > 0 ? (
+                              <Badge variant="secondary" className="bg-primary/10 text-primary text-[10px]">
+                                En stock
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="bg-destructive/10 text-destructive text-[10px]">
+                                Agotado
+                              </Badge>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        </main>
+      </div>
       
       <Footer />
     </div>
