@@ -37,6 +37,28 @@ async function fetchCSV(url: string): Promise<string> {
   return content;
 }
 
+function validateImageUrl(url: string): string | null {
+  if (!url || url.trim() === '') return null;
+  
+  const trimmedUrl = url.trim();
+  
+  // Check if it's a valid HTTP/HTTPS URL
+  if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+    return null;
+  }
+  
+  // Check if it contains ELSI logo or placeholder patterns
+  const lowerUrl = trimmedUrl.toLowerCase();
+  if (lowerUrl.includes('elsi') && lowerUrl.includes('logo')) {
+    return null;
+  }
+  if (lowerUrl.includes('placeholder') || lowerUrl.includes('no-image')) {
+    return null;
+  }
+  
+  return trimmedUrl;
+}
+
 function normalizeCategory(category: string): string {
   if (!category) return '';
   // Capitalize first letter of each word
@@ -145,6 +167,10 @@ function parseCSV(csvContent: string): Product[] {
       continue;
     }
     
+    // Extract and validate image URL from multiple possible columns
+    const rawImageUrl = rowData['imagen'] || rowData['image'] || rowData['url_imagen'] || rowData['fotografia'] || '';
+    const validatedImageUrl = validateImageUrl(rawImageUrl);
+    
     const product: Product = {
       brand: rowData['marca'] || '',
       part_number: partNumber,
@@ -153,7 +179,7 @@ function parseCSV(csvContent: string): Product[] {
       barcode: rowData['cod. barras'] || rowData['barcode'] || '',
       price: parseFloat(rowData['precio'] || '0'),
       stock: parseInt(rowData['stock'] || '0', 10),
-      image_url: rowData['fotografia'] || rowData['imagen'] || '',
+      image_url: validatedImageUrl || '',
       category: assignCategory(rowData),
     };
     
@@ -209,24 +235,28 @@ async function upsertProductsToDatabase(
     errors: 0
   };
 
-  // Fetch existing products to determine insert vs update
+  // Fetch existing products to determine insert vs update (include image_url to preserve manual uploads)
   const { data: existingProducts, error: fetchError } = await supabase
     .from('products')
-    .select('sku, id');
+    .select('sku, id, image_url');
 
   if (fetchError) {
     console.error('Error fetching existing products:', fetchError);
     throw new Error(`Failed to fetch existing products: ${fetchError.message}`);
   }
 
-  const existingSkuMap = new Map(existingProducts?.map(p => [p.sku, p.id]) || []);
-  console.log(`Found ${existingSkuMap.size} existing products in database`);
+  const existingProductMap = new Map(existingProducts?.map(p => [p.sku, { id: p.id, image_url: p.image_url }]) || []);
+  console.log(`Found ${existingProductMap.size} existing products in database`);
 
   let featuredCount = 0;
   const featuredKeywords = ['promoción', 'promocion', 'oferta', 'nuevo'];
   
   // Track category distribution
   const categoryCount = new Map<string, number>();
+  
+  // Track image statistics
+  let productsWithValidImages = 0;
+  let manualImagesPreserved = 0;
 
   // Process in batches of 100
   const batchSize = 100;
@@ -242,20 +272,36 @@ async function upsertProductsToDatabase(
         }
 
         const sku = product.part_number;
-        const existingId = existingSkuMap.get(sku);
+        const existingProduct = existingProductMap.get(sku);
         const priceCents = Math.round(product.price * 100);
 
-        if (existingId) {
-          // UPDATE: Only update price, stock, and image_url (preserve manual edits)
+        if (existingProduct) {
+          // UPDATE: Only update price, stock, and image_url
+          // Preserve manually uploaded images (don't overwrite if CSV image is empty/invalid)
+          const shouldUpdateImage = product.image_url && (!existingProduct.image_url || !existingProduct.image_url.includes('supabase'));
+          
+          if (!shouldUpdateImage && existingProduct.image_url) {
+            manualImagesPreserved++;
+          }
+          
+          const updateData: any = {
+            price_cents: priceCents,
+            stock: product.stock,
+            updated_at: new Date().toISOString()
+          };
+          
+          // Only update image_url if we have a valid one and it's not a manual upload
+          if (shouldUpdateImage) {
+            updateData.image_url = product.image_url;
+            if (product.image_url) {
+              productsWithValidImages++;
+            }
+          }
+          
           const { error: updateError } = await supabase
             .from('products')
-            .update({
-              price_cents: priceCents,
-              stock: product.stock,
-              image_url: product.image_url || null,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', existingId);
+            .update(updateData)
+            .eq('id', existingProduct.id);
 
           if (updateError) {
             console.error(`Error updating product ${sku}:`, updateError);
@@ -280,6 +326,11 @@ async function upsertProductsToDatabase(
           // Track category for logging
           const categoryName = product.category || 'Sin categoría';
           categoryCount.set(categoryName, (categoryCount.get(categoryName) || 0) + 1);
+          
+          // Track valid images
+          if (product.image_url) {
+            productsWithValidImages++;
+          }
 
           const { error: insertError } = await supabase
             .from('products')
@@ -317,6 +368,8 @@ async function upsertProductsToDatabase(
 
   console.log(`Upsert complete - Inserted: ${summary.inserted}, Updated: ${summary.updated}, Skipped: ${summary.skipped}, Errors: ${summary.errors}`);
   console.log(`Featured products set: ${featuredCount}`);
+  console.log(`Products with valid images: ${productsWithValidImages}`);
+  console.log(`Manual images preserved: ${manualImagesPreserved}`);
   
   // Log category distribution
   console.log('Category distribution:');
