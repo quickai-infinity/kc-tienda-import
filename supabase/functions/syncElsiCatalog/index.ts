@@ -32,6 +32,7 @@ function normalizeText(text: string): string {
     .toString()
     .replace(/<\/?[^>]+(>|$)/g, '') // Remove HTML tags
     .replace(/&nbsp;/g, ' ')       // Replace &nbsp; with space
+    .replace(/\s+/g, ' ')          // Replace multiple spaces with single space
     .trim();
 }
 
@@ -117,17 +118,31 @@ function detectCategoryFromDescription(description: string): string {
 }
 
 function assignCategory(rowData: Record<string, string>): string {
-  // Priority 1: familia
-  let category = rowData['familia'] || '';
+  // Priority 1: Nombre de familia (exact ELSI column name)
+  let category = 
+    rowData['Nombre de familia'] ||
+    rowData['familia'] || 
+    rowData['Familia'] ||
+    '';
   
   // Priority 2: subfamilia or categoria
   if (!category) {
-    category = rowData['subfamilia'] || rowData['categoria'] || '';
+    category = 
+      rowData['Nombre subfamilia'] ||
+      rowData['subfamilia'] || 
+      rowData['Subfamilia'] ||
+      rowData['categoria'] || 
+      rowData['Categoria'] ||
+      '';
   }
   
   // Priority 3: Auto-detect from descripción
   if (!category) {
-    const description = rowData['descripcion'] || rowData['descripción'] || '';
+    const description = 
+      rowData['Descripción'] ||
+      rowData['descripcion'] || 
+      rowData['descripción'] || 
+      '';
     category = detectCategoryFromDescription(description);
   }
   
@@ -144,14 +159,12 @@ function parseCSV(csvContent: string): Product[] {
   
   console.log(`Total lines in CSV: ${lines.length}`);
   
-  // First line is headers - normalize and clean
+  // First line is headers - keep original case but normalize
   const headerLine = lines[0];
   const headers = headerLine.split(';').map(h => 
     h.trim()
       .replace(/^"|"$/g, '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove accents
+      .replace(/\s+/g, ' ')
   );
   
   console.log(`CSV headers (${headers.length} columns): ${headers.join(', ')}`);
@@ -180,8 +193,16 @@ function parseCSV(csvContent: string): Product[] {
       rowData[header] = values[index];
     });
     
-    // Map Spanish CSV columns to Product interface
-    const partNumber = rowData['part number'] || rowData['partnumber'] || rowData['codigo articulo'] || '';
+    // Map Spanish CSV columns to Product interface (exact ELSI column names)
+    const partNumber = normalizeText(
+      rowData['Part number'] || 
+      rowData['part number'] || 
+      rowData['partnumber'] || 
+      rowData['Part Number'] ||
+      rowData['codigo'] ||
+      rowData['ref'] ||
+      ''
+    );
     
     // Skip rows without part_number
     if (!partNumber) {
@@ -191,54 +212,66 @@ function parseCSV(csvContent: string): Product[] {
     
     // Extract and validate image URL from multiple possible columns
     const rawImageUrl = 
+      rowData['Fotografía'] ||
+      rowData['fotografia'] ||
+      rowData['Fotografia'] ||
       rowData['imagen'] || 
       rowData['urlimagen'] || 
       rowData['url_imagen'] || 
       rowData['image'] || 
-      rowData['img'] || 
-      rowData['photo'] || 
-      rowData['fotografia'] || 
       '';
     const validatedImageUrl = validateImageUrl(rawImageUrl);
     
-    // Map ELSI CSV fields to Product interface with refined mapping
+    // Map ELSI CSV fields to Product interface with exact column names
     const product: Product = {
       name: normalizeText(
+        rowData['Descripción'] ||
+        rowData['descripcion'] || 
+        rowData['Descripcion'] ||
         rowData['descripcion_principal'] || 
         rowData['descripcionprincipal'] ||
-        rowData['descripcion'] || 
-        rowData['descripción'] ||
         rowData['titulo'] ||
         ''
       ) || 'Sin nombre',
       brand: normalizeText(
+        rowData['Marca'] ||
         rowData['marca'] || 
         rowData['fabricante'] || 
         ''
       ),
       part_number: partNumber,
       description: normalizeText(
+        rowData['Descripción 2'] ||
+        rowData['descripcion 2'] ||
+        rowData['Descripcion 2'] ||
+        rowData['descripcion2'] ||
         rowData['descripcion_secundaria'] || 
         rowData['descripcionsecundaria'] ||
         rowData['descripcionlarga'] ||
         rowData['caracteristicas'] ||
-        rowData['descripcion 2'] ||
-        rowData['descripcion2'] ||
         ''
       ),
       description2: normalizeText(
-        rowData['descripcion_secundaria'] || 
-        rowData['descripcionsecundaria'] ||
+        rowData['Descripción 2'] ||
         rowData['descripcion 2'] ||
+        rowData['descripcion_secundaria'] || 
         ''
       ),
-      barcode: normalizeText(rowData['cod. barras'] || rowData['barcode'] || rowData['codigo_barras'] || ''),
+      barcode: normalizeText(
+        rowData['cod. barras'] || 
+        rowData['barcode'] || 
+        rowData['codigo_barras'] || 
+        ''
+      ),
       price: parseFloat(
-        (rowData['precio'] || rowData['precio_base'] || rowData['price'] || '0')
+        (rowData['Precio'] || rowData['precio'] || rowData['precio_base'] || rowData['price'] || '0')
           .replace(',', '.')
           .replace(/[^\d.]/g, '')
       ),
-      stock: parseInt(rowData['stock'] || rowData['disponible'] || '0', 10),
+      stock: parseInt(
+        rowData['Stock'] || rowData['stock'] || rowData['disponible'] || '0', 
+        10
+      ),
       image_url: validatedImageUrl || '',
       category: assignCategory(rowData),
     };
