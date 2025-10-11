@@ -15,6 +15,24 @@ interface Product {
   stock: number;
   image_url: string;
   category: string;
+  name: string;
+}
+
+interface UpsertSummary {
+  inserted: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+}
+
+// Utility functions
+function stripHtmlTags(text: string): string {
+  return text.replace(/<[^>]*>/g, '').trim();
+}
+
+function cleanText(text: string): string {
+  if (!text) return '';
+  return stripHtmlTags(text).trim();
 }
 
 interface UpsertSummary {
@@ -46,7 +64,7 @@ function validateImageUrl(url: string): string | null {
   if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
     // Check if it contains ELSI logo or placeholder patterns
     const lowerUrl = trimmedUrl.toLowerCase();
-    if (lowerUrl.includes('elsi') && lowerUrl.includes('logo')) {
+    if (lowerUrl.includes('logo')) {
       return null;
     }
     if (lowerUrl.includes('placeholder') || lowerUrl.includes('no-image')) {
@@ -55,9 +73,9 @@ function validateImageUrl(url: string): string | null {
     return trimmedUrl;
   }
   
-  // If it's a relative path, prepend ELSI base URL
+  // If it's a relative path, prepend ELSI shop base URL
   if (trimmedUrl.length > 0 && !trimmedUrl.startsWith('http')) {
-    return `https://www.elsi.es/imagenes/${trimmedUrl}`;
+    return `https://shop.elsi.es/${trimmedUrl}`;
   }
   
   return null;
@@ -183,12 +201,14 @@ function parseCSV(csvContent: string): Product[] {
       '';
     const validatedImageUrl = validateImageUrl(rawImageUrl);
     
+    // Map ELSI CSV fields to Product interface
     const product: Product = {
-      brand: rowData['marca'] || '',
+      name: cleanText(rowData['descripcion_principal'] || rowData['descripcion'] || rowData['descripción'] || ''),
+      brand: cleanText(rowData['marca'] || ''),
       part_number: partNumber,
-      description: rowData['descripcion'] || rowData['descripción'] || '',
-      description2: rowData['descripcion 2'] || '',
-      barcode: rowData['cod. barras'] || rowData['barcode'] || '',
+      description: cleanText(rowData['descripcion_secundaria'] || rowData['descripcion 2'] || ''),
+      description2: cleanText(rowData['descripcion_secundaria'] || rowData['descripcion 2'] || ''),
+      barcode: cleanText(rowData['cod. barras'] || rowData['barcode'] || ''),
       price: parseFloat(rowData['precio'] || '0'),
       stock: parseInt(rowData['stock'] || '0', 10),
       image_url: validatedImageUrl || '',
@@ -358,17 +378,19 @@ async function upsertProductsToDatabase(
             .from('products')
             .insert({
               sku: sku,
-              title: product.description || product.part_number,
-              description: product.description2 || product.description || null,
+              name: product.name || product.part_number,
+              title: product.name || product.part_number,
+              description: product.description || product.description2 || null,
               price_base: priceBaseCents,
               price_cents: priceFinalCents,
+              price_final: priceFinalCents,
               currency: 'eur',
               stock: product.stock,
               image_url: product.image_url || null,
               category: product.category || null,
               brand: product.brand || null,
               tags: null,
-              active: true, // New products are active by default
+              active: true,
               featured: isFeatured
             });
 
@@ -394,6 +416,15 @@ async function upsertProductsToDatabase(
   console.log(`Products with valid images: ${productsWithValidImages}`);
   console.log(`Manual images preserved: ${manualImagesPreserved}`);
   console.log(`Image URL detection: Found ${productsWithValidImages} products with valid image URLs out of ${summary.inserted + summary.updated} processed`);
+  console.log(`Total products imported: ${products.length}`);
+  
+  // Log first 3 entries for verification
+  if (products.length > 0) {
+    console.log('Sample products (first 3):');
+    products.slice(0, 3).forEach((p: Product, i: number) => {
+      console.log(`  ${i + 1}. Name: "${p.name}", Brand: "${p.brand}", Image: "${p.image_url || 'N/A'}"`);
+    });
+  }
   
   // Log category distribution
   console.log('Category distribution:');

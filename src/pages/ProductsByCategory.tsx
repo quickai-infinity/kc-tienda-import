@@ -15,9 +15,11 @@ import { Helmet } from "react-helmet";
 interface Product {
   id: string;
   sku: string;
+  name: string;
   title: string;
   description: string | null;
   price_cents: number;
+  price_final: number;
   currency: string;
   image_url: string | null;
   category: string | null;
@@ -139,7 +141,7 @@ const ProductsByCategory = () => {
                       {/* Product Info */}
                       <div className="p-4">
                         <h3 className="font-semibold text-lg mb-1 line-clamp-2">
-                          {product.title}
+                          {product.name || product.title}
                         </h3>
                         {product.brand && (
                           <p className="text-sm text-muted-foreground mb-3">
@@ -147,7 +149,7 @@ const ProductsByCategory = () => {
                           </p>
                         )}
                         <div className="text-2xl font-bold text-primary mb-1">
-                          {formatPrice(product.price_cents, product.currency)}
+                          {formatPrice(product.price_final || product.price_cents, product.currency)}
                         </div>
                         <p className="text-xs italic text-muted-foreground">
                           (precio final con IVA incluido)

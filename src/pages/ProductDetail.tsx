@@ -15,10 +15,12 @@ import { Helmet } from "react-helmet";
 interface Product {
   id: string;
   sku: string;
+  name: string;
   title: string;
   description: string | null;
   price_cents: number;
   price_base: number;
+  price_final: number;
   currency: string;
   image_url: string | null;
   category: string | null;
@@ -94,10 +96,10 @@ const ProductDetail = () => {
   return (
     <>
       <Helmet>
-        <title>{product.title} - KCtienda</title>
-        <meta name="description" content={product.description || product.title} />
-        <meta property="og:title" content={product.title} />
-        <meta property="og:description" content={product.description || product.title} />
+        <title>{product.name || product.title} - KCtienda</title>
+        <meta name="description" content={product.description || product.name || product.title} />
+        <meta property="og:title" content={product.name || product.title} />
+        <meta property="og:description" content={product.description || product.name || product.title} />
         <meta property="og:image" content={product.image_url || ""} />
         <meta property="og:type" content="product" />
       </Helmet>
@@ -142,16 +144,16 @@ const ProductDetail = () => {
 
               {/* Product Title */}
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">{product.title}</h1>
+                <h1 className="text-3xl md:text-4xl font-bold mb-2">{product.name || product.title}</h1>
                 {product.brand && (
-                  <p className="text-lg text-muted-foreground">{product.brand}</p>
+                  <p className="text-lg font-semibold text-muted-foreground">{product.brand}</p>
                 )}
               </div>
 
               {/* Price */}
               <div className="border-y py-4">
                 <div className="text-4xl font-bold text-primary mb-1">
-                  {formatPrice(product.price_cents, product.currency)}
+                  {formatPrice(product.price_final || product.price_cents, product.currency)}
                 </div>
                 <p className="text-sm italic text-muted-foreground">
                   (precio final con IVA incluido)
