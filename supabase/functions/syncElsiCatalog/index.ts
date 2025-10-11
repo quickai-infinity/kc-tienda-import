@@ -26,13 +26,13 @@ interface UpsertSummary {
 }
 
 // Utility functions
-function stripHtmlTags(text: string): string {
-  return text.replace(/<[^>]*>/g, '').trim();
-}
-
-function cleanText(text: string): string {
+function normalizeText(text: string): string {
   if (!text) return '';
-  return stripHtmlTags(text).trim();
+  return text
+    .toString()
+    .replace(/<\/?[^>]+(>|$)/g, '') // Remove HTML tags
+    .replace(/&nbsp;/g, ' ')       // Replace &nbsp; with space
+    .trim();
 }
 
 interface UpsertSummary {
@@ -201,34 +201,44 @@ function parseCSV(csvContent: string): Product[] {
       '';
     const validatedImageUrl = validateImageUrl(rawImageUrl);
     
-    // Map ELSI CSV fields to Product interface
-    // ELSI CSV columns: descripcion_principal, descripcion_secundaria, marca, part_number, precio, stock, imagen
+    // Map ELSI CSV fields to Product interface with refined mapping
     const product: Product = {
-      name: cleanText(
+      name: normalizeText(
         rowData['descripcion_principal'] || 
         rowData['descripcionprincipal'] ||
         rowData['descripcion'] || 
-        rowData['descripción'] || 
+        rowData['descripción'] ||
+        rowData['titulo'] ||
+        ''
+      ) || 'Sin nombre',
+      brand: normalizeText(
+        rowData['marca'] || 
+        rowData['fabricante'] || 
         ''
       ),
-      brand: cleanText(rowData['marca'] || ''),
       part_number: partNumber,
-      description: cleanText(
+      description: normalizeText(
         rowData['descripcion_secundaria'] || 
         rowData['descripcionsecundaria'] ||
+        rowData['descripcionlarga'] ||
+        rowData['caracteristicas'] ||
         rowData['descripcion 2'] ||
         rowData['descripcion2'] ||
         ''
       ),
-      description2: cleanText(
+      description2: normalizeText(
         rowData['descripcion_secundaria'] || 
         rowData['descripcionsecundaria'] ||
         rowData['descripcion 2'] ||
         ''
       ),
-      barcode: cleanText(rowData['cod. barras'] || rowData['barcode'] || rowData['codigo_barras'] || ''),
-      price: parseFloat(rowData['precio'] || rowData['price'] || '0'),
-      stock: parseInt(rowData['stock'] || '0', 10),
+      barcode: normalizeText(rowData['cod. barras'] || rowData['barcode'] || rowData['codigo_barras'] || ''),
+      price: parseFloat(
+        (rowData['precio'] || rowData['precio_base'] || rowData['price'] || '0')
+          .replace(',', '.')
+          .replace(/[^\d.]/g, '')
+      ),
+      stock: parseInt(rowData['stock'] || rowData['disponible'] || '0', 10),
       image_url: validatedImageUrl || '',
       category: assignCategory(rowData),
     };
