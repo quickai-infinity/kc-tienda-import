@@ -20,19 +20,19 @@ const Shop = () => {
             <div className="sticky top-0 z-10 bg-background border-b">
               <div className="container mx-auto px-4 py-3 flex items-center gap-4">
                 <SidebarTrigger />
-                <h1 className="text-xl md:text-2xl font-bold">Categorías de Productos</h1>
+                <h1 className="text-lg font-semibold">Productos</h1>
               </div>
             </div>
 
             {/* Hero Section */}
-            <section className="bg-gradient-to-b from-primary/10 to-background py-12 md:py-16">
+            <section className="bg-background py-12 md:py-16">
               <div className="container mx-auto px-4">
                 <div className="max-w-3xl mx-auto text-center">
-                  <Package className="h-16 w-16 mx-auto mb-6 text-primary" />
-                  <h2 className="text-2xl md:text-3xl font-bold mb-4">
+                  <Package className="h-12 w-12 mx-auto mb-4 text-primary" />
+                  <h2 className="text-2xl md:text-3xl font-bold mb-3">
                     Explora Nuestro Catálogo
                   </h2>
-                  <p className="text-base md:text-lg text-muted-foreground mb-6">
+                  <p className="text-muted-foreground mb-6">
                     Selecciona una categoría del menú lateral para ver los productos disponibles.
                   </p>
                   <Link to="/">

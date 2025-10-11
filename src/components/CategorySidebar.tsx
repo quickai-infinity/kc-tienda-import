@@ -13,7 +13,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Package, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, Package, Plus, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -106,33 +106,41 @@ export function CategorySidebar() {
   const renderCategory = (category: Category, level: number = 0) => {
     const hasChildren = category.children && category.children.length > 0;
     const active = isActive(category.slug);
+    const shouldDefaultOpen = category.children?.some(c => isActive(c.slug)) || false;
 
     if (hasChildren) {
       return (
-        <Collapsible key={category.id} defaultOpen={category.children?.some(c => isActive(c.slug))}>
+        <Collapsible key={category.id} defaultOpen={shouldDefaultOpen}>
           <SidebarMenuItem>
-            <CollapsibleTrigger asChild>
-              <SidebarMenuButton className={active ? "bg-muted" : ""}>
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <Package className="h-4 w-4 flex-shrink-0" />
+            <div className="flex items-center w-full gap-1">
+              {!collapsed && (
+                <CollapsibleTrigger className="p-1 hover:bg-muted rounded flex-shrink-0 [&[data-state=open]>svg.plus]:hidden [&[data-state=closed]>svg.minus]:hidden">
+                  <Plus className="h-3 w-3 plus" />
+                  <Minus className="h-3 w-3 minus" />
+                </CollapsibleTrigger>
+              )}
+              <SidebarMenuButton 
+                asChild={category.product_count ? category.product_count > 0 : false}
+                className={`flex-1 ${active ? "bg-muted font-medium" : ""}`}
+              >
+                {category.product_count && category.product_count > 0 ? (
+                  <Link to={`/categoria/${category.slug}`} className="flex items-center justify-between w-full">
+                    <span className="truncate text-sm">{category.name}</span>
                     {!collapsed && (
-                      <>
-                        <span className="truncate">{category.name}</span>
-                        {category.product_count && category.product_count > 0 && (
-                          <Badge variant="secondary" className="ml-auto flex-shrink-0">
-                            {category.product_count}
-                          </Badge>
-                        )}
-                      </>
+                      <Badge variant="secondary" className="ml-2 flex-shrink-0 text-xs">
+                        {category.product_count}
+                      </Badge>
                     )}
+                  </Link>
+                ) : (
+                  <div className="flex items-center justify-between w-full">
+                    <span className="truncate text-sm">{category.name}</span>
                   </div>
-                  {!collapsed && <ChevronDown className="h-4 w-4 flex-shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />}
-                </div>
+                )}
               </SidebarMenuButton>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarMenu className="ml-4 border-l pl-2">
+            </div>
+            <CollapsibleContent className="transition-all duration-200">
+              <SidebarMenu className={`ml-6 mt-1 space-y-1 ${!collapsed ? 'border-l border-border pl-3' : ''}`}>
                 {category.children?.map(child => renderCategory(child, level + 1))}
               </SidebarMenu>
             </CollapsibleContent>
@@ -143,21 +151,14 @@ export function CategorySidebar() {
 
     return (
       <SidebarMenuItem key={category.id}>
-        <SidebarMenuButton asChild className={active ? "bg-muted" : ""}>
+        <SidebarMenuButton asChild className={`${active ? "bg-muted font-medium" : ""} hover:bg-muted/50`}>
           <Link to={`/categoria/${category.slug}`} className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Package className="h-4 w-4 flex-shrink-0" />
-              {!collapsed && (
-                <>
-                  <span className="truncate">{category.name}</span>
-                  {category.product_count && category.product_count > 0 && (
-                    <Badge variant="secondary" className="ml-auto flex-shrink-0">
-                      {category.product_count}
-                    </Badge>
-                  )}
-                </>
-              )}
-            </div>
+            <span className="truncate text-sm">{category.name}</span>
+            {!collapsed && category.product_count && category.product_count > 0 && (
+              <Badge variant="secondary" className="ml-2 flex-shrink-0 text-xs">
+                {category.product_count}
+              </Badge>
+            )}
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
@@ -178,11 +179,13 @@ export function CategorySidebar() {
 
   return (
     <Sidebar>
-      <SidebarContent>
+      <SidebarContent className="py-4">
         <SidebarGroup>
-          <SidebarGroupLabel>Categorías</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs uppercase tracking-wider font-semibold px-4 mb-2">
+            Categorías
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1 px-2">
               {categories.length === 0 ? (
                 <div className="text-center py-6 px-4">
                   <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />

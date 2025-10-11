@@ -133,12 +133,12 @@ const CategoryProducts = () => {
               <div className="container mx-auto px-4 py-3 flex items-center gap-2">
                 <SidebarTrigger />
                 <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Link to="/" className="hover:text-primary flex items-center gap-1">
+                  <Link to="/" className="hover:text-primary flex items-center gap-1 transition-colors">
                     <Home className="h-4 w-4" />
                     Inicio
                   </Link>
                   <ChevronRight className="h-4 w-4" />
-                  <Link to="/shop" className="hover:text-primary">
+                  <Link to="/shop" className="hover:text-primary transition-colors">
                     Categorías
                   </Link>
                   <ChevronRight className="h-4 w-4" />
@@ -147,12 +147,12 @@ const CategoryProducts = () => {
               </div>
             </div>
 
-            <div className="container mx-auto px-4 py-8">
+            <div className="container mx-auto px-4 py-6">
               {/* Category Header */}
-              <div className="mb-8">
-                <h1 className="text-3xl md:text-4xl font-bold mb-3">{category.name}</h1>
+              <div className="mb-6">
+                <h1 className="text-2xl md:text-3xl font-bold mb-2">{category.name}</h1>
                 {category.description && !category.description.includes("importada automáticamente") && (
-                  <p className="text-muted-foreground text-lg">{category.description}</p>
+                  <p className="text-muted-foreground">{category.description}</p>
                 )}
                 <p className="text-sm text-muted-foreground mt-2">
                   {products.length} {products.length === 1 ? 'producto' : 'productos'}
