@@ -35,43 +35,73 @@ function parseCSV(csvContent: string): Product[] {
     throw new Error('CSV file is empty');
   }
   
-  // First line is headers
-  const headers = lines[0].split(';').map(h => h.trim().replace(/^"|"$/g, ''));
-  console.log(`CSV headers: ${headers.join(', ')}`);
+  console.log(`Total lines in CSV: ${lines.length}`);
+  
+  // First line is headers - normalize and clean
+  const headerLine = lines[0];
+  const headers = headerLine.split(';').map(h => 
+    h.trim()
+      .replace(/^"|"$/g, '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove accents
+  );
+  
+  console.log(`CSV headers (${headers.length} columns): ${headers.join(', ')}`);
   
   const products: Product[] = [];
+  let skippedRows = 0;
   
   // Parse data rows
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
-    if (!line) continue;
+    if (!line) {
+      skippedRows++;
+      continue;
+    }
     
     const values = line.split(';').map(v => v.trim().replace(/^"|"$/g, ''));
     
-    if (values.length === headers.length) {
-      const rowData: Record<string, string> = {};
-      headers.forEach((header, index) => {
-        rowData[header] = values[index];
-      });
-      
-      // Map CSV columns to our Product interface
-      // Adjust these mappings based on actual CSV column names
-      const product: Product = {
-        brand: rowData['brand'] || rowData['marca'] || '',
-        part_number: rowData['part_number'] || rowData['referencia'] || rowData['codigo'] || '',
-        description: rowData['description'] || rowData['descripcion'] || '',
-        description2: rowData['description2'] || rowData['descripcion2'] || '',
-        barcode: rowData['barcode'] || rowData['ean'] || '',
-        price: parseFloat(rowData['price'] || rowData['precio'] || '0'),
-        stock: parseInt(rowData['stock'] || rowData['existencias'] || '0', 10),
-        image_url: rowData['image_url'] || rowData['imagen'] || '',
-      };
-      
-      products.push(product);
+    if (values.length !== headers.length) {
+      console.log(`Skipping row ${i}: column count mismatch (expected ${headers.length}, got ${values.length})`);
+      skippedRows++;
+      continue;
     }
+    
+    const rowData: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      rowData[header] = values[index];
+    });
+    
+    // Map Spanish CSV columns to Product interface
+    const partNumber = rowData['part number'] || rowData['partnumber'] || rowData['codigo articulo'] || '';
+    
+    // Skip rows without part_number
+    if (!partNumber) {
+      skippedRows++;
+      continue;
+    }
+    
+    const product: Product = {
+      brand: rowData['marca'] || '',
+      part_number: partNumber,
+      description: rowData['descripcion'] || '',
+      description2: rowData['descripcion 2'] || '',
+      barcode: rowData['cod. barras'] || rowData['barcode'] || '',
+      price: parseFloat(rowData['precio'] || '0'),
+      stock: parseInt(rowData['stock'] || '0', 10),
+      image_url: rowData['fotografia'] || rowData['imagen'] || '',
+    };
+    
+    products.push(product);
   }
   
-  console.log(`Parsed ${products.length} products from CSV`);
+  console.log(`Parsed ${products.length} products from CSV (skipped ${skippedRows} rows)`);
+  
+  if (products.length > 0) {
+    console.log('First 2 products:', JSON.stringify(products.slice(0, 2), null, 2));
+  }
+  
   return products;
 }
 
