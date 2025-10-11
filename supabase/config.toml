@@ -8,6 +8,3 @@ verify_jwt = true
 
 [functions.updateProductsFromElsi]
 verify_jwt = true
-
-[functions.create-checkout-session]
-verify_jwt = false
