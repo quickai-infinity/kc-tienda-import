@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
-import { Loader2, ShoppingCart, ChevronRight, Home } from "lucide-react";
+import { Loader2, ShoppingCart, Package } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "@/lib/formatPrice";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -89,7 +89,7 @@ const CategoryProducts = () => {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <SidebarProvider>
+        <SidebarProvider defaultOpen={true}>
           <div className="flex-1 flex w-full">
             <CategorySidebar />
             <div className="flex-1 flex items-center justify-center">
@@ -106,11 +106,11 @@ const CategoryProducts = () => {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <SidebarProvider>
+        <SidebarProvider defaultOpen={true}>
           <div className="flex-1 flex w-full">
             <CategorySidebar />
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-muted-foreground">Categoría no encontrada</p>
+              <p className="text-muted-foreground/70">Categoría no encontrada</p>
             </div>
           </div>
         </SidebarProvider>
@@ -123,126 +123,93 @@ const CategoryProducts = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={true}>
         <div className="flex-1 flex w-full">
           <CategorySidebar />
           
-          <main className="flex-1 overflow-auto">
-            {/* Header with Sidebar Trigger */}
-            <div className="sticky top-0 z-10 bg-background border-b">
-              <div className="container mx-auto px-4 py-3 flex items-center gap-2">
-                <SidebarTrigger />
-                <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Link to="/" className="hover:text-primary flex items-center gap-1 transition-colors">
-                    <Home className="h-4 w-4" />
-                    Inicio
-                  </Link>
-                  <ChevronRight className="h-4 w-4" />
-                  <Link to="/shop" className="hover:text-primary transition-colors">
-                    Categorías
-                  </Link>
-                  <ChevronRight className="h-4 w-4" />
-                  <span className="text-foreground font-medium">{category.name}</span>
-                </nav>
+          <main className="flex-1 overflow-auto bg-background">
+            {/* Header with Sidebar Trigger and Breadcrumb */}
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
+              <div className="container mx-auto px-6 py-3 flex items-center gap-4">
+                <SidebarTrigger className="lg:hidden" />
+                <div className="flex items-center gap-2 text-sm text-muted-foreground/70">
+                  <Link to="/" className="hover:text-primary transition-colors">Inicio</Link>
+                  <span>/</span>
+                  <span className="text-foreground/90 font-medium">{category.name}</span>
+                </div>
               </div>
             </div>
 
-            <div className="container mx-auto px-4 py-6">
-              {/* Category Header */}
-              <div className="mb-6">
-                <h1 className="text-2xl md:text-3xl font-bold mb-2">{category.name}</h1>
-                {category.description && !category.description.includes("importada automáticamente") && (
-                  <p className="text-muted-foreground">{category.description}</p>
-                )}
-                <p className="text-sm text-muted-foreground mt-2">
-                  {products.length} {products.length === 1 ? 'producto' : 'productos'}
-                </p>
-              </div>
-
-              {/* Products Grid */}
-              {products.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No hay productos en esta categoría actualmente.</p>
-                  <Link to="/shop">
-                    <Button variant="outline" className="mt-4">
-                      Ver todas las categorías
-                    </Button>
-                  </Link>
+            {/* Products Section */}
+            <section className="py-6">
+              <div className="container mx-auto px-6">
+                {/* Category Title */}
+                <div className="mb-6">
+                  <h1 className="text-2xl font-bold mb-2 text-foreground/90">{category.name}</h1>
+                  <p className="text-sm text-muted-foreground/70">
+                    {products.length} {products.length === 1 ? 'producto' : 'productos'}
+                  </p>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {products.map((product) => (
-                    <Card key={product.id} className="flex flex-col">
-                      <Link to={`/producto/${product.id}`}>
-                        <div className="aspect-square overflow-hidden bg-muted">
-                          {product.image_url ? (
+
+                {loading ? (
+                  <div className="flex justify-center items-center py-16">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : products.length === 0 ? (
+                  <div className="text-center py-16">
+                    <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p className="text-muted-foreground/70">No hay productos en esta categoría.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {products.map((product) => (
+                      <Link
+                        key={product.id}
+                        to={`/producto/${product.id}`}
+                        className="group"
+                      >
+                        <Card className="overflow-hidden hover:shadow-xl hover:border-primary/20 transition-all duration-300 h-full flex flex-col">
+                          <div className="aspect-square overflow-hidden bg-muted/50">
                             <img
-                              src={product.image_url}
-                              alt={product.name}
-                              className="w-full h-full object-cover hover:scale-105 transition-transform"
+                              src={product.image_url || "/assets/no-image.png"}
+                              alt={product.name || product.title}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                              onError={(e) => {
+                                e.currentTarget.src = "/assets/no-image.png";
+                              }}
                             />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <img
-                                src="/assets/no-image.png"
-                                alt="Sin imagen"
-                                className="w-32 h-32 opacity-50"
-                              />
+                          </div>
+                          <CardContent className="p-4 flex-1 flex flex-col">
+                            <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                              {product.name || product.title}
+                            </h3>
+                            {product.brand && (
+                              <p className="text-xs text-muted-foreground/70 mb-3">
+                                {product.brand}
+                              </p>
+                            )}
+                            <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
+                              <span className="text-lg font-bold text-primary">
+                                {formatPrice(product.price_cents)}
+                              </span>
+                              {product.stock > 0 ? (
+                                <Badge variant="secondary" className="bg-primary/10 text-primary text-[10px] h-5">
+                                  En stock
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-destructive/10 text-destructive text-[10px] h-5">
+                                  Agotado
+                                </Badge>
+                              )}
                             </div>
-                          )}
-                        </div>
+                          </CardContent>
+                        </Card>
                       </Link>
-                      
-                      <CardHeader>
-                        <CardTitle className="line-clamp-2 text-base">{product.name}</CardTitle>
-                        {product.brand && (
-                          <CardDescription className="text-xs">{product.brand}</CardDescription>
-                        )}
-                      </CardHeader>
-                      
-                      <CardContent className="flex-1">
-                        <p className="text-2xl font-bold text-green-600">
-                          {formatPrice(product.price_cents)}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          (precio final con IVA incluido)
-                        </p>
-                        {product.stock > 0 ? (
-                          <Badge variant="outline" className="mt-2">
-                            {t('inStock')}
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="mt-2">
-                            {t('outOfStock')}
-                          </Badge>
-                        )}
-                      </CardContent>
-                      
-                      <CardFooter>
-                        <Button
-                          className="w-full"
-                          disabled={product.stock <= 0}
-                          onClick={() => {
-                          addToCart({
-                            id: product.id,
-                            title: product.title,
-                            price_cents: product.price_cents,
-                            currency: 'eur',
-                            image_url: product.image_url,
-                            stock: product.stock,
-                          });
-                            toast.success(t('addedToCart'));
-                          }}
-                        >
-                          <ShoppingCart className="mr-2 h-4 w-4" />
-                          {product.stock > 0 ? t('addToCart') : t('outOfStock')}
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
           </main>
         </div>
       </SidebarProvider>

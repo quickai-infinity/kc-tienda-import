@@ -11,32 +11,32 @@ const Shop = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={true}>
         <div className="flex-1 flex w-full">
           <CategorySidebar />
           
           <main className="flex-1 overflow-auto">
             {/* Header with Sidebar Trigger */}
-            <div className="sticky top-0 z-10 bg-background border-b">
-              <div className="container mx-auto px-4 py-3 flex items-center gap-4">
-                <SidebarTrigger />
-                <h1 className="text-lg font-semibold">Productos</h1>
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
+              <div className="container mx-auto px-6 py-3 flex items-center gap-4">
+                <SidebarTrigger className="lg:hidden" />
+                <h1 className="text-base font-semibold text-foreground/90">Catálogo de Productos</h1>
               </div>
             </div>
 
             {/* Hero Section */}
-            <section className="bg-background py-12 md:py-16">
-              <div className="container mx-auto px-4">
-                <div className="max-w-3xl mx-auto text-center">
-                  <Package className="h-12 w-12 mx-auto mb-4 text-primary" />
-                  <h2 className="text-2xl md:text-3xl font-bold mb-3">
+            <section className="py-16 md:py-24">
+              <div className="container mx-auto px-6">
+                <div className="max-w-2xl mx-auto text-center">
+                  <Package className="h-14 w-14 mx-auto mb-5 text-primary/80" />
+                  <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                     Explora Nuestro Catálogo
                   </h2>
-                  <p className="text-muted-foreground mb-6">
+                  <p className="text-muted-foreground text-base mb-8">
                     Selecciona una categoría del menú lateral para ver los productos disponibles.
                   </p>
                   <Link to="/">
-                    <Button variant="outline" className="gap-2">
+                    <Button variant="outline" className="gap-2 h-10">
                       <ArrowLeft className="h-4 w-4" />
                       Volver al Inicio
                     </Button>

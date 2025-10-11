@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Package, Plus, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Category {
   id: string;
@@ -30,9 +31,9 @@ interface Category {
 export function CategorySidebar() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const { state } = useSidebar();
+  const { open } = useSidebar();
   const location = useLocation();
-  const collapsed = state === "collapsed";
+  const collapsed = !open;
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -114,33 +115,33 @@ export function CategorySidebar() {
           <SidebarMenuItem>
             <div className="flex items-center w-full gap-1">
               {!collapsed && (
-                <CollapsibleTrigger className="p-1 hover:bg-muted rounded flex-shrink-0 [&[data-state=open]>svg.plus]:hidden [&[data-state=closed]>svg.minus]:hidden">
-                  <Plus className="h-3 w-3 plus" />
-                  <Minus className="h-3 w-3 minus" />
+                <CollapsibleTrigger className="p-1 hover:bg-accent/50 rounded flex-shrink-0 transition-colors [&[data-state=open]>svg.plus]:hidden [&[data-state=closed]>svg.minus]:hidden">
+                  <Plus className="h-3.5 w-3.5 plus text-muted-foreground" />
+                  <Minus className="h-3.5 w-3.5 minus text-muted-foreground" />
                 </CollapsibleTrigger>
               )}
               <SidebarMenuButton 
                 asChild={category.product_count ? category.product_count > 0 : false}
-                className={`flex-1 ${active ? "bg-muted font-medium" : ""}`}
+                className={`flex-1 h-8 ${active ? "bg-primary/10 text-primary font-medium border-l-2 border-primary" : "text-foreground/80 hover:text-foreground hover:bg-accent/30"}`}
               >
                 {category.product_count && category.product_count > 0 ? (
                   <Link to={`/categoria/${category.slug}`} className="flex items-center justify-between w-full">
-                    <span className="truncate text-sm">{category.name}</span>
+                    <span className="truncate text-[13px]">{category.name}</span>
                     {!collapsed && (
-                      <Badge variant="secondary" className="ml-2 flex-shrink-0 text-xs">
+                      <Badge variant="secondary" className="ml-2 flex-shrink-0 text-[10px] px-1.5 py-0 h-5 bg-accent/50">
                         {category.product_count}
                       </Badge>
                     )}
                   </Link>
                 ) : (
                   <div className="flex items-center justify-between w-full">
-                    <span className="truncate text-sm">{category.name}</span>
+                    <span className="truncate text-[13px] font-medium">{category.name}</span>
                   </div>
                 )}
               </SidebarMenuButton>
             </div>
             <CollapsibleContent className="transition-all duration-200">
-              <SidebarMenu className={`ml-6 mt-1 space-y-1 ${!collapsed ? 'border-l border-border pl-3' : ''}`}>
+              <SidebarMenu className={`ml-4 mt-0.5 space-y-0.5 ${!collapsed ? 'border-l border-border/50 pl-2' : ''}`}>
                 {category.children?.map(child => renderCategory(child, level + 1))}
               </SidebarMenu>
             </CollapsibleContent>
@@ -151,11 +152,14 @@ export function CategorySidebar() {
 
     return (
       <SidebarMenuItem key={category.id}>
-        <SidebarMenuButton asChild className={`${active ? "bg-muted font-medium" : ""} hover:bg-muted/50`}>
+        <SidebarMenuButton 
+          asChild 
+          className={`h-8 ${active ? "bg-primary/10 text-primary font-medium border-l-2 border-primary" : "text-foreground/80 hover:text-foreground hover:bg-accent/30"}`}
+        >
           <Link to={`/categoria/${category.slug}`} className="flex items-center justify-between w-full">
-            <span className="truncate text-sm">{category.name}</span>
+            <span className="truncate text-[13px]">{category.name}</span>
             {!collapsed && category.product_count && category.product_count > 0 && (
-              <Badge variant="secondary" className="ml-2 flex-shrink-0 text-xs">
+              <Badge variant="secondary" className="ml-2 flex-shrink-0 text-[10px] px-1.5 py-0 h-5 bg-accent/50">
                 {category.product_count}
               </Badge>
             )}
@@ -178,28 +182,30 @@ export function CategorySidebar() {
   }
 
   return (
-    <Sidebar>
-      <SidebarContent className="py-4">
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs uppercase tracking-wider font-semibold px-4 mb-2">
-            Categorías
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1 px-2">
-              {categories.length === 0 ? (
-                <div className="text-center py-6 px-4">
-                  <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    No hay categorías disponibles
-                  </p>
-                </div>
-              ) : (
-                categories.map(category => renderCategory(category))
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+    <Sidebar className="border-r border-border/50 shadow-lg">
+      <ScrollArea className="h-full">
+        <SidebarContent className="py-3">
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[11px] uppercase tracking-widest font-bold px-3 mb-3 text-muted-foreground/70">
+              Productos
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-0.5 px-2">
+                {categories.length === 0 ? (
+                  <div className="text-center py-8 px-4">
+                    <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                    <p className="text-xs text-muted-foreground/70">
+                      No hay categorías disponibles
+                    </p>
+                  </div>
+                ) : (
+                  categories.map(category => renderCategory(category))
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+      </ScrollArea>
     </Sidebar>
   );
 }
