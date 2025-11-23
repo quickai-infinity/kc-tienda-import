@@ -203,31 +203,14 @@ const Index = () => {
 
       <div className="flex-1 flex flex-col items-center justify-center">
         <div className="max-w-md w-full space-y-8 text-center">
-          {/* Logo centrado arriba del título */}
+          {/* Logo centrado arriba */}
           {(companyBranding?.logo_url || branding?.logo_url) && (
-            <div className="flex justify-center mb-8">
+            <div className="flex justify-center mb-12">
               <img 
                 src={companyBranding?.logo_url || branding?.logo_url || ""} 
                 alt={companyBranding?.company_name || branding?.app_name || "Logo"} 
-                className="w-32 h-auto object-contain"
+                className="w-40 h-auto object-contain"
               />
-            </div>
-          )}
-
-          <h1 className="text-4xl md:text-5xl font-bold mb-12" style={{
-            color: companyBranding?.text_color || '#FFFFFF'
-          }}>
-            Subir factura para comparar
-          </h1>
-
-          {/* Show active company name */}
-          {(companyBranding?.company_name || branding?.active_company) && (
-            <div className="mb-6">
-              <h2 className="text-2xl font-semibold" style={{
-                color: companyBranding?.text_color || '#FFFFFF'
-              }}>
-                {companyBranding?.company_name || branding?.active_company}
-              </h2>
             </div>
           )}
 
