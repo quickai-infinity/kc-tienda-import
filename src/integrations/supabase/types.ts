@@ -53,6 +53,33 @@ export type Database = {
         }
         Relationships: []
       }
+      branding: {
+        Row: {
+          app_name: string
+          id: string
+          logo_url: string | null
+          primary_color: string
+          show_only_my_company: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          app_name?: string
+          id?: string
+          logo_url?: string | null
+          primary_color?: string
+          show_only_my_company?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          app_name?: string
+          id?: string
+          logo_url?: string | null
+          primary_color?: string
+          show_only_my_company?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
