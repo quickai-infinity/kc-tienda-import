@@ -42,6 +42,11 @@ const Register = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log('=== INICIO REGISTRO ===');
+    console.log('Email raw:', email);
+    console.log('Password length:', password.length);
+    console.log('Platform:', navigator.userAgent);
+
     // Validate input with zod
     const result = registerSchema.safeParse({
       email: email.trim(),
@@ -50,6 +55,7 @@ const Register = () => {
     });
 
     if (!result.success) {
+      console.error('Validation failed:', result.error.errors);
       const firstError = result.error.errors[0];
       toast({
         title: "Error de validación",
@@ -59,9 +65,13 @@ const Register = () => {
       return;
     }
 
+    console.log('Validation passed, attempting signup...');
+    console.log('Email after validation:', result.data.email);
+    
     setLoading(true);
 
     try {
+      console.log('Calling supabase.auth.signUp...');
       const { data, error } = await supabase.auth.signUp({
         email: result.data.email,
         password: result.data.password,
@@ -70,12 +80,20 @@ const Register = () => {
         },
       });
 
-      if (error) throw error;
+      console.log('Signup response:', { data, error });
+
+      if (error) {
+        console.error('Signup error:', error);
+        throw error;
+      }
+
+      console.log('Signup successful, user created:', data.user?.id);
 
       // Role is automatically assigned by database trigger (company_admin)
 
       // Send notification email to admin (non-blocking)
       try {
+        console.log('Sending admin notification email...');
         await supabase.functions.invoke('notify-new-user', {
           body: {
             userEmail: result.data.email,
@@ -94,8 +112,10 @@ const Register = () => {
         duration: 5000,
       });
 
+      console.log('Navigating to pending-approval...');
       navigate("/pending-approval");
     } catch (error: any) {
+      console.error('Registration error caught:', error);
       toast({
         title: "Error de registro",
         description: error.message || "No se pudo crear la cuenta",
@@ -103,6 +123,7 @@ const Register = () => {
       });
     } finally {
       setLoading(false);
+      console.log('=== FIN REGISTRO ===');
     }
   };
 
