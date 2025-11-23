@@ -47,6 +47,7 @@ const Index = () => {
         <div className="space-y-4">
           <Button
             size="lg"
+            onClick={() => navigate('/processing')}
             className="w-full h-16 text-xl rounded-2xl bg-[#0A8754] hover:bg-[#0A8754]/90 text-white shadow-lg"
           >
             <Upload className="mr-3 h-6 w-6" />
@@ -55,6 +56,7 @@ const Index = () => {
 
           <Button
             size="lg"
+            onClick={() => navigate('/processing')}
             className="w-full h-16 text-xl rounded-2xl bg-[#FFC300] hover:bg-[#FFC300]/90 text-gray-900 shadow-lg"
           >
             <Camera className="mr-3 h-6 w-6" />
