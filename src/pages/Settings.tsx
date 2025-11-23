@@ -116,7 +116,7 @@ const Settings = () => {
     }
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -151,7 +151,7 @@ const Settings = () => {
         }
       }
 
-      // Upload new logo
+      // Upload new logo with unique timestamp
       const fileExt = file.name.split('.').pop();
       const fileName = `logo-${Date.now()}.${fileExt}`;
       
@@ -177,19 +177,19 @@ const Settings = () => {
 
       if (updateError) throw updateError;
 
-      // Forzar recarga completa de branding desde el servidor
-      await refreshBranding();
-
-      // Esperar un momento para que el servidor procese
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Refrescar una vez más para asegurar que tenemos la última versión
+      // Refresh branding
       await refreshBranding();
 
       toast({
         title: "Logo actualizado",
         description: "El logo se ha subido correctamente",
       });
+
+      // Force page reload to clear all caches
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+
     } catch (error: any) {
       console.error("Error uploading logo:", error);
       toast({
