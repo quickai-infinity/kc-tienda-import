@@ -677,6 +677,15 @@ export type Database = {
         Args: { data: string; key?: string }
         Returns: string
       }
+      get_sync_state_with_lock: {
+        Args: { operation_name: string }
+        Returns: {
+          created_at: string
+          in_progress: boolean
+          last_run: string
+          operation: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

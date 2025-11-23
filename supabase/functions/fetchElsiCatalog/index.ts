@@ -29,15 +29,25 @@ function sanitizeError(error: Error): string {
   return 'An error occurred during catalog sync';
 }
 
+// Sanitize CSV fields to prevent formula injection
+function sanitizeCSVField(value: string): string {
+  if (!value) return value;
+  // Prefix with single quote if starts with formula characters
+  if (/^[=+\-@\t\r]/.test(value)) {
+    return "'" + value;
+  }
+  return value;
+}
+
 function validateCatalogItem(item: Partial<CatalogRow>): CatalogRow | null {
-  // Validate part_number
+  // Validate and sanitize part_number (prevent CSV injection)
   if (!item.part_number || item.part_number.length > 100) {
-    console.warn('Invalid part_number:', item.part_number);
     return null;
   }
+  const part_number = sanitizeCSVField(item.part_number);
   
   // Validate brand
-  const brand = (item.brand || '').substring(0, 100);
+  const brand = sanitizeCSVField((item.brand || '').substring(0, 100));
   
   // Validate stock
   const stock = parseInt(String(item.stock)) || 0;
@@ -54,10 +64,10 @@ function validateCatalogItem(item: Partial<CatalogRow>): CatalogRow | null {
   }
   
   // Validate and sanitize description
-  const description = (item.description || '')
+  const description = sanitizeCSVField((item.description || '')
     .substring(0, 5000)
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;'));
   
   // Validate image_url
   let image_url = item.image_url || '';
@@ -78,7 +88,7 @@ function validateCatalogItem(item: Partial<CatalogRow>): CatalogRow | null {
   }
   
   return {
-    part_number: item.part_number,
+    part_number,
     brand,
     stock,
     price,
@@ -113,7 +123,8 @@ async function downloadFromFTP(
     console.log(`Downloaded ${content.length} bytes from FTP`);
     return content;
   } catch (error) {
-    console.error('FTP download error:', error);
+    const errorId = crypto.randomUUID();
+    console.error(`FTP download failed [${errorId}]`);
     throw new Error('Failed to download catalog file');
   }
 }
@@ -229,33 +240,41 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check rate limiting
-    const { data: syncState } = await supabase
-      .from('sync_state')
-      .select('last_run, in_progress')
-      .eq('operation', 'fetch_catalog')
-      .single();
+    // Check rate limiting with database-level locking
+    const { data: syncState, error: lockError } = await supabase
+      .rpc('get_sync_state_with_lock', { operation_name: 'fetch_catalog' });
 
-    if (syncState) {
-      if (syncState.in_progress) {
+    if (lockError) {
+      // If we can't get the lock, another sync is in progress
+      return new Response(
+        JSON.stringify({ error: "Sync already in progress" }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (syncState && syncState.length > 0) {
+      const state = syncState[0];
+      if (state.in_progress) {
         return new Response(
           JSON.stringify({ error: "Sync already in progress" }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const lastRun = new Date(syncState.last_run);
-      const now = new Date();
-      const minutesSinceLastRun = (now.getTime() - lastRun.getTime()) / 1000 / 60;
+      if (state.last_run) {
+        const lastRunTime = new Date(state.last_run).getTime();
+        const nowTime = Date.now();
+        const minutesSinceLastRun = (nowTime - lastRunTime) / 1000 / 60;
 
-      if (minutesSinceLastRun < 5) {
-        return new Response(
-          JSON.stringify({ 
-            error: "Rate limit exceeded",
-            message: `Please wait ${Math.ceil(5 - minutesSinceLastRun)} minutes before syncing again`
-          }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        if (minutesSinceLastRun < 5) {
+          return new Response(
+            JSON.stringify({ 
+              error: "Rate limit exceeded",
+              message: `Please wait ${Math.ceil(5 - minutesSinceLastRun)} minutes before syncing again`
+            }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
     }
 
@@ -322,7 +341,8 @@ Deno.serve(async (req) => {
       .neq('id', '00000000-0000-0000-0000-000000000000');
 
     if (deleteError) {
-      console.error('Error clearing catalog:', deleteError);
+      const errorId = crypto.randomUUID();
+      console.error(`Database clear failed [${errorId}]`);
       await logOperation(supabase, 'fetch_catalog', 'error', 'Failed to clear catalog', 0);
       throw new Error('Database operation failed');
     }
@@ -339,7 +359,8 @@ Deno.serve(async (req) => {
         .insert(batch);
 
       if (insertError) {
-        console.error(`Error inserting batch ${i / batchSize + 1}:`, insertError);
+        const errorId = crypto.randomUUID();
+        console.error(`Batch insert failed [${errorId}] - batch ${i / batchSize + 1}`);
         await logOperation(
           supabase,
           'fetch_catalog',
@@ -394,7 +415,8 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in fetchElsiCatalog:', error);
+    const errorId = crypto.randomUUID();
+    console.error(`Operation failed [${errorId}]`);
     const errorMessage = error instanceof Error ? error.message : String(error);
     const userMessage = error instanceof Error ? sanitizeError(error) : 'An error occurred';
     
