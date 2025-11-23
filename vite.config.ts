@@ -17,13 +17,17 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Comparador de Facturas',
+        name: 'Comparador de Facturas de Energía',
         short_name: 'Facturas',
-        description: 'Compara tus facturas de energía entre empresas de España',
+        description: 'Compara tus facturas de electricidad y gas entre empresas de España. Escanea o sube tu factura y ahorra dinero.',
         theme_color: '#003942',
         background_color: '#003942',
         display: 'standalone',
         orientation: 'portrait',
+        start_url: '/',
+        scope: '/',
+        categories: ['utilities', 'finance', 'productivity'],
+        lang: 'es-ES',
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -35,6 +39,14 @@ export default defineConfig(({ mode }) => ({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
+          }
+        ],
+        screenshots: [
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            form_factor: 'narrow'
           }
         ]
       },
@@ -53,6 +65,10 @@ export default defineConfig(({ mode }) => ({
             }
           }
         ]
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module'
       }
     })
   ].filter(Boolean),
