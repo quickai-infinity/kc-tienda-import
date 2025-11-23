@@ -16,6 +16,7 @@ import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import BrandManager from "./pages/BrandManager";
 import AdminTariffs from "./pages/AdminTariffs";
+import Install from "./pages/Install";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
               <Route path="/brand-manager" element={<BrandManager />} />
               <Route path="/admin/tariffs" element={<AdminTariffs />} />
+              <Route path="/install" element={<Install />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>

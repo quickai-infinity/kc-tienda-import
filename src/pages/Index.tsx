@@ -297,6 +297,19 @@ const Index = () => {
             Comparación rápida entre empresas de España
           </p>
 
+          {/* Install App Link */}
+          <div className="mt-6 text-center">
+            <button
+              onClick={() => navigate('/install')}
+              className="text-sm font-medium underline hover:no-underline transition-all"
+              style={{
+                color: companyBranding?.text_color ? `${companyBranding.text_color}99` : 'rgba(255, 255, 255, 0.6)'
+              }}
+            >
+              📱 ¿Cómo instalar la app en mi teléfono?
+            </button>
+          </div>
+
           <div className="mt-12 pt-8">
             <div className="flex flex-wrap justify-center items-center gap-6 opacity-70">
               {companies.map((company) => (
