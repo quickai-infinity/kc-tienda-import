@@ -155,11 +155,6 @@ const BrandManager = () => {
         description: "El logo se ha subido correctamente",
       });
 
-      // Force page reload to clear all caches
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-
     } catch (error: any) {
       toast({
         title: "Error",
