@@ -40,17 +40,24 @@ const Results = () => {
   }, [navigate]);
   
   const extractedData = location.state?.extractedData || {};
-  // Get from sessionStorage as fallback for mobile devices (state can be lost)
-  const currentCompany = location.state?.currentCompany || sessionStorage.getItem('currentCompany') || "";
-  const compareCompany = location.state?.compareCompany || sessionStorage.getItem('compareCompany') || "";
-  const tariffType = (location.state?.tariffType || sessionStorage.getItem('tariffType') || "electricity") as "electricity" | "gas";
+  // Get from localStorage as fallback for PWA on Android (state can be lost)
+  const currentCompany = location.state?.currentCompany || localStorage.getItem('currentCompany') || "";
+  const compareCompany = location.state?.compareCompany || localStorage.getItem('compareCompany') || "";
+  const tariffType = (location.state?.tariffType || localStorage.getItem('tariffType') || "electricity") as "electricity" | "gas";
   
-  // Clean up sessionStorage after reading
+  console.log('Results page - Received:', { 
+    currentCompany, 
+    compareCompany, 
+    tariffType,
+    extractedEmpresa: extractedData.empresa 
+  });
+  
+  // Clean up localStorage after reading
   useEffect(() => {
     return () => {
-      sessionStorage.removeItem('currentCompany');
-      sessionStorage.removeItem('compareCompany');
-      sessionStorage.removeItem('tariffType');
+      localStorage.removeItem('currentCompany');
+      localStorage.removeItem('compareCompany');
+      localStorage.removeItem('tariffType');
     };
   }, []);
   
@@ -147,8 +154,15 @@ const Results = () => {
       setCompanies(calculatedCompanies);
 
       // Calculate savings: find which company is current and which is comparison
-      // Current company name comes from the invoice
-      const currentCompanyName = extractedData.empresa?.toUpperCase();
+      // Use the selected currentCompany, NOT the extracted empresa from OCR
+      const currentCompanyNameUpper = currentCompany?.toUpperCase();
+      const compareCompanyNameUpper = compareCompany?.toUpperCase();
+      
+      console.log('Calculating savings with:', {
+        currentCompanyNameUpper,
+        compareCompanyNameUpper,
+        calculatedCompanies: calculatedCompanies.map(c => ({ name: c.name, price: c.pricePerMonth }))
+      });
       
       // Find the prices by matching company names (case-insensitive)
       let currentCompanyPrice = precioActual; // Default to invoice price
@@ -156,20 +170,23 @@ const Results = () => {
       
       calculatedCompanies.forEach((company) => {
         const normalizedCompanyName = company.name?.toUpperCase();
-        if (normalizedCompanyName === currentCompanyName) {
-          // This is the current company - use invoice price preferentially
-          currentCompanyPrice = precioActual || company.pricePerMonth;
-        } else if (company.pricePerMonth !== null) {
-          // This is the comparison company and it has a valid price
+        
+        // Match against selected companies, not OCR extracted data
+        if (normalizedCompanyName === currentCompanyNameUpper && company.pricePerMonth !== null) {
+          // This is the current company - prefer calculated tariff over invoice price
+          currentCompanyPrice = company.pricePerMonth || precioActual;
+        } else if (normalizedCompanyName === compareCompanyNameUpper && company.pricePerMonth !== null) {
+          // This is the comparison company
           compareCompanyPrice = company.pricePerMonth;
         }
       });
 
-      console.log("Savings calculation v3:", { 
-        currentCompanyName,
+      console.log("Savings calculation:", { 
+        currentCompany,
+        compareCompany,
         currentCompanyPrice, 
         compareCompanyPrice,
-        companies: calculatedCompanies
+        monthlyDiff: currentCompanyPrice && compareCompanyPrice ? currentCompanyPrice - compareCompanyPrice : 0
       });
 
       if (currentCompanyPrice && compareCompanyPrice) {
