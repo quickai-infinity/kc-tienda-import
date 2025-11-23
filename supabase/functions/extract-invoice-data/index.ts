@@ -36,6 +36,33 @@ serve(async (req) => {
       );
     }
 
+    // Validate file size (10MB limit)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_FILE_SIZE) {
+      return new Response(
+        JSON.stringify({ error: "El archivo excede el límite de 10MB" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    const fileExtension = file.name.toLowerCase().split('.').pop();
+    const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+    
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension || '')) {
+      return new Response(
+        JSON.stringify({ error: "Tipo de archivo no permitido. Solo se aceptan PDF, JPG y PNG" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     console.log("Processing file:", file.name, "Type:", file.type);
 
     // Convert file to base64 in chunks to avoid stack overflow
