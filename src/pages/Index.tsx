@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Upload, Camera, Settings } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   Select,
   SelectContent,
@@ -16,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isAdmin } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [currentCompany, setCurrentCompany] = useState<string>("");
   const [compareCompany, setCompareCompany] = useState<string>("");
@@ -121,13 +123,15 @@ const Index = () => {
         }}
       />
 
-      {/* Settings Icon */}
-      <button
-        onClick={() => navigate('/settings')}
-        className="absolute top-6 right-4 text-white hover:text-white/80 transition-colors z-10"
-      >
-        <Settings className="h-6 w-6" />
-      </button>
+      {/* Settings Icon - Only visible for admins */}
+      {isAdmin && (
+        <button
+          onClick={() => navigate('/settings')}
+          className="absolute top-6 right-4 text-white hover:text-white/80 transition-colors z-10"
+        >
+          <Settings className="h-6 w-6" />
+        </button>
+      )}
 
       <div className="flex-1 flex flex-col items-center justify-center">
         <div className="max-w-md w-full space-y-8 text-center">

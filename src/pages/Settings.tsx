@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Upload } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useBranding } from "@/contexts/BrandingContext";
+import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -9,9 +13,65 @@ import Footer from "@/components/Footer";
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { role, loading: roleLoading } = useUserRole();
+  const { branding, refreshBranding } = useBranding();
   const [appName, setAppName] = useState("Compare Energia");
   const [showOnlyMyCompany, setShowOnlyMyCompany] = useState(false);
   const [primaryColor, setPrimaryColor] = useState("#0A8754");
+  const [saving, setSaving] = useState(false);
+
+  // Redirect non-admin users
+  useEffect(() => {
+    if (!roleLoading && role !== "admin") {
+      navigate("/");
+    }
+  }, [role, roleLoading, navigate]);
+
+  // Load branding data
+  useEffect(() => {
+    if (branding) {
+      setAppName(branding.app_name);
+      setPrimaryColor(branding.primary_color);
+      setShowOnlyMyCompany(branding.show_only_my_company);
+    }
+  }, [branding]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("branding")
+        .update({
+          app_name: appName,
+          primary_color: primaryColor,
+          show_only_my_company: showOnlyMyCompany,
+        })
+        .eq("id", branding?.id);
+
+      if (error) throw error;
+
+      await refreshBranding();
+      
+      toast({
+        title: "Configuración guardada",
+        description: "Los cambios se han aplicado correctamente.",
+      });
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar la configuración.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (roleLoading || role !== "admin") {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] relative">
@@ -101,6 +161,17 @@ const Settings = () => {
               />
             </div>
           </div>
+        </div>
+
+        {/* Save Button */}
+        <div className="pb-8">
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full h-12 bg-[#0A8754] text-white rounded-xl hover:bg-[#0A8754]/90"
+          >
+            {saving ? "Guardando..." : "Guardar cambios"}
+          </Button>
         </div>
       </div>
 
