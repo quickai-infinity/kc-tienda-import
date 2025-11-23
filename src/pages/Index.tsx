@@ -87,14 +87,14 @@ const Index = () => {
       return;
     }
 
-    // Validate file size (max 6MB for camera photos, 10MB for PDFs)
-    const maxSize = file.type.startsWith('image/') ? 6 * 1024 * 1024 : 10 * 1024 * 1024;
+    // Validate file size (max 10MB for camera photos, 15MB for PDFs)
+    const maxSize = file.type.startsWith('image/') ? 10 * 1024 * 1024 : 15 * 1024 * 1024;
     if (file.size > maxSize) {
       toast({
         title: "Archivo muy grande",
         description: file.type.startsWith('image/') 
-          ? "La foto no debe superar los 6MB" 
-          : "El archivo no debe superar los 10MB",
+          ? "La foto no debe superar los 10MB" 
+          : "El archivo no debe superar los 15MB",
         variant: "destructive",
       });
       return;
