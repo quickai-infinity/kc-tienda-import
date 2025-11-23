@@ -78,23 +78,28 @@ const Results = () => {
       const facturaCompany = extractedData.empresa || "";
       const selectedCompany = localStorage.getItem('selectedCompany') || "";
       
+      console.log('Loading companies:', { facturaCompany, selectedCompany, precioActual, consumoKwh });
+      
       // Crear lista de empresas únicas (evitar duplicados)
       const companiesToLoad = Array.from(new Set([facturaCompany, selectedCompany].filter(Boolean)));
       const calculatedCompanies: CompanyOption[] = [];
 
       for (const companyName of companiesToLoad) {
-        // Get empresa
+        // Get empresa (case-insensitive search)
         const { data: empresa } = await supabase
           .from("empresas")
           .select("id")
-          .eq("nombre", companyName)
+          .ilike("nombre", companyName)
           .single();
 
+        console.log(`Company ${companyName}:`, empresa);
+
         if (!empresa) {
+          // Si es la empresa de la factura, usar precio del OCR
           calculatedCompanies.push({
             id: companyName || "",
             name: companyName || "",
-            pricePerMonth: facturaCompany === companyName ? precioActual : null,
+            pricePerMonth: facturaCompany.toUpperCase() === companyName.toUpperCase() ? precioActual : null,
             hasTariff: false,
           });
           continue;
@@ -110,13 +115,15 @@ const Results = () => {
             .eq("empresa_id", empresa.id)
             .single();
 
+          console.log(`Tarifa electricidad for ${companyName}:`, tarifaElec);
+
           if (!tarifaElec) {
-            // If this is the current company (from invoice), use invoice price
-            const isCurrentCompany = companyName === extractedData.empresa;
+            // Si es la empresa de la factura, usar precio del OCR
+            const isFacturaCompany = facturaCompany.toUpperCase() === companyName.toUpperCase();
             calculatedCompanies.push({
               id: empresa.id,
               name: companyName || "",
-              pricePerMonth: isCurrentCompany ? precioActual : null,
+              pricePerMonth: isFacturaCompany ? precioActual : null,
               hasTariff: false,
             });
             continue;
@@ -131,12 +138,12 @@ const Results = () => {
             .single();
 
           if (!tarifaGas) {
-            // If this is the current company (from invoice), use invoice price
-            const isCurrentCompany = companyName === extractedData.empresa;
+            // Si es la empresa de la factura, usar precio del OCR
+            const isFacturaCompany = facturaCompany.toUpperCase() === companyName.toUpperCase();
             calculatedCompanies.push({
               id: empresa.id,
               name: companyName || "",
-              pricePerMonth: isCurrentCompany ? precioActual : null,
+              pricePerMonth: isFacturaCompany ? precioActual : null,
               hasTariff: false,
             });
             continue;
@@ -153,17 +160,31 @@ const Results = () => {
         });
       }
 
+      console.log('Calculated companies:', calculatedCompanies);
+
       setCompanies(calculatedCompanies);
 
       // Calcular ahorros: empresa de factura vs empresa seleccionada
-      const facturaCompanyData = calculatedCompanies.find(c => c.name === facturaCompany);
-      const selectedCompanyData = calculatedCompanies.find(c => c.name === selectedCompany);
+      const facturaCompanyData = calculatedCompanies.find(c => 
+        c.name.toUpperCase() === facturaCompany.toUpperCase()
+      );
+      const selectedCompanyData = calculatedCompanies.find(c => 
+        c.name.toUpperCase() === selectedCompany.toUpperCase()
+      );
+      
+      console.log('Price data:', { 
+        facturaCompanyData, 
+        selectedCompanyData,
+        facturaPrice: facturaCompanyData?.pricePerMonth || precioActual,
+        selectedPrice: selectedCompanyData?.pricePerMonth
+      });
       
       const facturaPrice = facturaCompanyData?.pricePerMonth || precioActual;
       const selectedPrice = selectedCompanyData?.pricePerMonth;
 
-      if (facturaPrice && selectedPrice && facturaCompany !== selectedCompany) {
+      if (facturaPrice && selectedPrice && facturaCompany.toUpperCase() !== selectedCompany.toUpperCase()) {
         const monthlyDiff = facturaPrice - selectedPrice;
+        console.log('Monthly difference:', monthlyDiff);
         // Solo mostrar ahorros positivos (cuando cambiar sería más barato)
         if (monthlyDiff > 0) {
           setSavingsPerMonth(formatCurrency(monthlyDiff));
