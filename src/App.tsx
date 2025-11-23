@@ -7,6 +7,9 @@ import { ThemeProvider } from "next-themes";
 import { BrandingProvider } from "@/contexts/BrandingContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ResetPassword from "./pages/ResetPassword";
+import Profile from "./pages/Profile";
 import Processing from "./pages/Processing";
 import Results from "./pages/Results";
 import Dashboard from "./pages/Dashboard";
@@ -25,6 +28,9 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/processing" element={<Processing />} />
               <Route path="/results" element={<Results />} />
               <Route path="/dashboard" element={<Dashboard />} />
