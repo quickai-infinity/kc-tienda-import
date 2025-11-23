@@ -10,11 +10,13 @@ import { useBranding } from "@/contexts/BrandingContext";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Footer from "@/components/Footer";
+import { calculateMonthlyElectricityPrice, formatCurrency } from "@/utils/tariffCalculations";
 
 interface CompanyOption {
   id: string;
   name: string;
-  pricePerMonth: string;
+  pricePerMonth: number | null;
+  hasTariff: boolean;
 }
 
 const Results = () => {
@@ -40,14 +42,87 @@ const Results = () => {
   const currentCompany = location.state?.currentCompany;
   const compareCompany = location.state?.compareCompany;
   
-  const savingsPerMonth = "32,47";
-  const savingsPerYear = "389,64";
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
+  const [savingsPerMonth, setSavingsPerMonth] = useState<string>("0,00");
+  const [savingsPerYear, setSavingsPerYear] = useState<string>("0,00");
+  const [loading, setLoading] = useState(true);
 
-  // Only show the two companies being compared
-  const companies: CompanyOption[] = [
-    currentCompany && { id: "current", name: currentCompany, pricePerMonth: "62,47" },
-    compareCompany && { id: "compare", name: compareCompany, pricePerMonth: "30" },
-  ].filter(Boolean) as CompanyOption[];
+  // Load tariffs and calculate prices
+  useEffect(() => {
+    const loadTariffsAndCalculate = async () => {
+      const consumoKwh = parseFloat(extractedData.consumo_kwh) || 0;
+      const precioActual = parseFloat(extractedData.precio_mensual) || null;
+
+      if (!consumoKwh) {
+        setLoading(false);
+        return;
+      }
+
+      const companiesToLoad = [currentCompany, compareCompany].filter(Boolean);
+      const calculatedCompanies: CompanyOption[] = [];
+
+      for (const companyName of companiesToLoad) {
+        // Get empresa
+        const { data: empresa } = await supabase
+          .from("empresas")
+          .select("id")
+          .eq("nombre", companyName)
+          .single();
+
+        if (!empresa) {
+          calculatedCompanies.push({
+            id: companyName || "",
+            name: companyName || "",
+            pricePerMonth: null,
+            hasTariff: false,
+          });
+          continue;
+        }
+
+        // Get tariff
+        const { data: tarifa } = await supabase
+          .from("tarifas_electricidad")
+          .select("*")
+          .eq("empresa_id", empresa.id)
+          .single();
+
+        if (!tarifa) {
+          calculatedCompanies.push({
+            id: empresa.id,
+            name: companyName || "",
+            pricePerMonth: null,
+            hasTariff: false,
+          });
+          continue;
+        }
+
+        const calculatedPrice = calculateMonthlyElectricityPrice(consumoKwh, tarifa);
+
+        calculatedCompanies.push({
+          id: empresa.id,
+          name: companyName || "",
+          pricePerMonth: calculatedPrice,
+          hasTariff: true,
+        });
+      }
+
+      setCompanies(calculatedCompanies);
+
+      // Calculate savings
+      const currentPrice = calculatedCompanies[0]?.pricePerMonth || precioActual;
+      const comparePrice = calculatedCompanies[1]?.pricePerMonth;
+
+      if (currentPrice && comparePrice) {
+        const monthlyDiff = currentPrice - comparePrice;
+        setSavingsPerMonth(formatCurrency(Math.abs(monthlyDiff)));
+        setSavingsPerYear(formatCurrency(Math.abs(monthlyDiff * 12)));
+      }
+
+      setLoading(false);
+    };
+
+    loadTariffsAndCalculate();
+  }, [extractedData, currentCompany, compareCompany]);
 
   const handleDownloadPDF = () => {
     toast({
@@ -141,7 +216,9 @@ const Results = () => {
 
         {/* Company Comparison Cards */}
         <div className="space-y-3 mt-12">
-          {companies.length > 0 ? (
+          {loading ? (
+            <div className="text-center text-white">Calculando precios...</div>
+          ) : companies.length > 0 ? (
             companies.map((company) => (
               <div
                 key={company.id}
@@ -158,7 +235,10 @@ const Results = () => {
                 <div className="text-xl font-bold" style={{
                   color: companyBranding?.text_color || '#FFFFFF'
                 }}>
-                  {company.pricePerMonth} €/mes
+                  {company.hasTariff && company.pricePerMonth !== null 
+                    ? `${formatCurrency(company.pricePerMonth)} €/mes`
+                    : <span className="text-sm text-white/60">Sin datos de tarifa</span>
+                  }
                 </div>
               </div>
             ))
