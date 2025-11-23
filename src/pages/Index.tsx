@@ -142,14 +142,20 @@ const Index = () => {
       {!isAuthenticated ? (
         <button
           onClick={() => navigate('/login')}
-          className="absolute top-6 right-4 px-4 py-2 text-white text-sm font-medium hover:text-white/80 transition-colors z-10"
+          className="absolute top-6 right-4 px-4 py-2 text-sm font-medium transition-colors z-10"
+          style={{
+            color: companyBranding?.text_color || '#FFFFFF'
+          }}
         >
           Log in
         </button>
       ) : isAdmin && (
         <button
           onClick={() => navigate('/settings')}
-          className="absolute top-6 right-4 text-white hover:text-white/80 transition-colors z-10"
+          className="absolute top-6 right-4 transition-colors z-10"
+          style={{
+            color: companyBranding?.text_color || '#FFFFFF'
+          }}
         >
           <Settings className="h-6 w-6" />
         </button>
@@ -168,14 +174,18 @@ const Index = () => {
             </div>
           )}
 
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold mb-12" style={{
+            color: companyBranding?.text_color || '#FFFFFF'
+          }}>
             Subir factura para comparar
           </h1>
 
           {/* Dropdown Selectors */}
           <div className="space-y-4 mb-8">
             <div className="space-y-2">
-              <label className="text-white text-sm font-medium block text-left">
+              <label className="text-sm font-medium block text-left" style={{
+                color: companyBranding?.text_color || '#FFFFFF'
+              }}>
                 Empresa actual
               </label>
               <Select value={currentCompany} onValueChange={setCurrentCompany}>
@@ -197,7 +207,9 @@ const Index = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-white text-sm font-medium block text-left">
+              <label className="text-sm font-medium block text-left" style={{
+                color: companyBranding?.text_color || '#FFFFFF'
+              }}>
                 Comparar con
               </label>
               <Select value={compareCompany} onValueChange={setCompareCompany}>
@@ -241,20 +253,21 @@ const Index = () => {
             </Button>
           </div>
 
-          <p className="text-white/80 text-lg mt-8">
+          <p className="text-lg mt-8" style={{
+            color: companyBranding?.text_color ? `${companyBranding.text_color}CC` : 'rgba(255, 255, 255, 0.8)'
+          }}>
             Comparación rápida entre empresas de España
           </p>
 
           <div className="mt-12 pt-8">
             <div className="flex flex-wrap justify-center items-center gap-6 opacity-70">
-              <div className="text-white text-sm font-semibold">Endesa</div>
-              <div className="text-white text-sm font-semibold">Iberdrola</div>
-              <div className="text-white text-sm font-semibold">Repsol</div>
-              <div className="text-white text-sm font-semibold">Naturgy</div>
-              <div className="text-white text-sm font-semibold">TotalEnergies</div>
-              <div className="text-white text-sm font-semibold">Lucera</div>
-              <div className="text-white text-sm font-semibold">Holaluz</div>
-              <div className="text-white text-sm font-semibold">Orange</div>
+              {companies.map((company) => (
+                <div key={company} className="text-sm font-semibold" style={{
+                  color: companyBranding?.text_color || '#FFFFFF'
+                }}>
+                  {company}
+                </div>
+              ))}
             </div>
           </div>
         </div>
