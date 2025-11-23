@@ -21,11 +21,24 @@ const Settings = () => {
   const [primaryColor, setPrimaryColor] = useState("#0A8754");
   const [saving, setSaving] = useState(false);
 
-  // Redirect non-admin users
+  // Check authentication and redirect if needed
   useEffect(() => {
-    if (!roleLoading && role !== "admin") {
-      navigate("/");
-    }
+    const checkAuthAndRole = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // If not authenticated, redirect to login
+      if (!session) {
+        navigate("/login");
+        return;
+      }
+      
+      // If authenticated but not admin, redirect to home
+      if (!roleLoading && role !== "admin") {
+        navigate("/");
+      }
+    };
+    
+    checkAuthAndRole();
   }, [role, roleLoading, navigate]);
 
   // Load branding data
