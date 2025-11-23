@@ -184,7 +184,7 @@ const Results = () => {
     loadTariffsAndCalculate();
   }, [extractedData, currentCompany, compareCompany, tariffType]);
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     try {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -194,44 +194,73 @@ const Results = () => {
       doc.setTextColor(0, 57, 66); // Petroleum blue
       doc.text("Informe de Comparación de Tarifas", pageWidth / 2, 20, { align: "center" });
       
-      // Company branding
-      if (companyBranding?.company_name) {
+      // Company branding with logo
+      if (companyBranding?.logo_url) {
+        try {
+          // Load logo image
+          const response = await fetch(companyBranding.logo_url);
+          const blob = await response.blob();
+          const reader = new FileReader();
+          
+          await new Promise((resolve, reject) => {
+            reader.onloadend = () => {
+              const base64data = reader.result as string;
+              // Add logo centered (30x30 mm, positioned at center)
+              const logoWidth = 30;
+              const logoHeight = 15;
+              const logoX = (pageWidth - logoWidth) / 2;
+              doc.addImage(base64data, 'PNG', logoX, 30, logoWidth, logoHeight);
+              resolve(null);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (error) {
+          console.error("Error loading logo for PDF:", error);
+          // Fallback to text if logo fails
+          if (companyBranding?.company_name) {
+            doc.setFontSize(12);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Generado por ${companyBranding.company_name}`, pageWidth / 2, 35, { align: "center" });
+          }
+        }
+      } else if (companyBranding?.company_name) {
         doc.setFontSize(12);
         doc.setTextColor(100, 100, 100);
-        doc.text(`Generado por ${companyBranding.company_name}`, pageWidth / 2, 30, { align: "center" });
+        doc.text(`Generado por ${companyBranding.company_name}`, pageWidth / 2, 35, { align: "center" });
       }
       
       // Date
       doc.setFontSize(10);
-      doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 20, 45);
+      doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 20, 55);
       
       // Extracted data section
       doc.setFontSize(14);
       doc.setTextColor(0, 0, 0);
-      doc.text("Datos de tu factura", 20, 60);
+      doc.text("Datos de tu factura", 20, 70);
       
       doc.setFontSize(11);
-      doc.text(`Empresa actual: ${extractedData.empresa || 'N/A'}`, 20, 70);
-      doc.text(`Tarifa actual: ${extractedData.tarifa || 'N/A'}`, 20, 78);
-      doc.text(`Consumo mensual: ${extractedData.consumo_kwh || 'N/A'} kWh`, 20, 86);
-      doc.text(`Precio mensual estimado: ${extractedData.precio_mensual || 'N/A'} €`, 20, 94);
-      doc.text(`CUPS: ${extractedData.cups || 'N/A'}`, 20, 102);
+      doc.text(`Empresa actual: ${extractedData.empresa || 'N/A'}`, 20, 80);
+      doc.text(`Tarifa actual: ${extractedData.tarifa || 'N/A'}`, 20, 88);
+      doc.text(`Consumo mensual: ${extractedData.consumo_kwh || 'N/A'} kWh`, 20, 96);
+      doc.text(`Precio mensual estimado: ${extractedData.precio_mensual || 'N/A'} €`, 20, 104);
+      doc.text(`CUPS: ${extractedData.cups || 'N/A'}`, 20, 112);
       
       // Savings section
       doc.setFontSize(16);
       doc.setTextColor(10, 135, 84); // Green
-      doc.text("Ahorro Estimado", 20, 120);
+      doc.text("Ahorro Estimado", 20, 130);
       
       doc.setFontSize(14);
-      doc.text(`${savingsPerMonth} €/mes`, 20, 132);
-      doc.text(`${savingsPerYear} €/año`, 20, 142);
+      doc.text(`${savingsPerMonth} €/mes`, 20, 142);
+      doc.text(`${savingsPerYear} €/año`, 20, 152);
       
       // Company comparison section
       doc.setFontSize(14);
       doc.setTextColor(0, 0, 0);
-      doc.text("Comparación de Empresas", 20, 160);
+      doc.text("Comparación de Empresas", 20, 170);
       
-      let yPosition = 170;
+      let yPosition = 180;
       companies.forEach((company, index) => {
         doc.setFontSize(11);
         const priceText = company.hasTariff && company.pricePerMonth !== null 
