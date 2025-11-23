@@ -94,16 +94,18 @@ const Settings = () => {
 
       if (error) throw error;
 
-      // Wait for realtime subscription to update
-      await new Promise(resolve => setTimeout(resolve, 500));
-
       // Success - show specific confirmation message
       toast({
         title: "Configuración guardada",
         description: activeCompany && activeCompany !== "none"
-          ? `La empresa activa se cambió correctamente a ${activeCompany}` 
-          : "Se han aplicado los cambios correctamente.",
+          ? `La empresa activa se cambió correctamente a ${activeCompany}. Refrescando...` 
+          : "Se han aplicado los cambios correctamente. Refrescando...",
       });
+
+      // Reload after a delay to show updated data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error: any) {
       console.error("Error saving settings:", error);
       toast({

@@ -195,30 +195,15 @@ const BrandManager = () => {
 
       if (error) throw error;
 
-      // Wait for DB to process
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Refresh the company list to get fresh data
-      const { data: refreshedCompanies, error: fetchError } = await supabase
-        .from("company_branding")
-        .select("*")
-        .order("company_name");
-
-      if (fetchError) throw fetchError;
-
-      if (refreshedCompanies) {
-        setCompanies(refreshedCompanies);
-        // Update current branding with fresh data from DB
-        const updatedBranding = refreshedCompanies.find(c => c.id === branding.id);
-        if (updatedBranding) {
-          setBranding(updatedBranding);
-        }
-      }
-
       toast({
         title: "Guardado",
-        description: "Los cambios se guardaron correctamente",
+        description: "Los cambios se guardaron correctamente. Refresca la página para ver los cambios.",
       });
+
+      // Reload after a delay to show updated data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error: any) {
       toast({
         title: "Error",
