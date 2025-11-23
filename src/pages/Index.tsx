@@ -87,26 +87,103 @@ const Index = () => {
       return;
     }
 
-    // Validate file size (max 20MB)
-    if (file.size > 20 * 1024 * 1024) {
+    // Validate file size (max 10MB for camera photos, 20MB for PDFs)
+    const maxSize = file.type.startsWith('image/') ? 10 * 1024 * 1024 : 20 * 1024 * 1024;
+    if (file.size > maxSize) {
       toast({
         title: "Archivo muy grande",
-        description: "El archivo no debe superar los 20MB",
+        description: file.type.startsWith('image/') 
+          ? "La foto no debe superar los 10MB" 
+          : "El archivo no debe superar los 20MB",
         variant: "destructive",
       });
       return;
+    }
+
+    // Compress image if needed (especially for Android camera photos)
+    let processedFile = file;
+    if (file.type.startsWith('image/') && file.size > 2 * 1024 * 1024) {
+      try {
+        processedFile = await compressImage(file);
+        console.log('Image compressed:', { 
+          originalSize: file.size, 
+          compressedSize: processedFile.size 
+        });
+      } catch (error) {
+        console.error('Error compressing image:', error);
+        // Continue with original file if compression fails
+      }
     }
 
     // Navigate to processing with the file
     // Use active company from branding as currentCompany
     const currentCompany = companyBranding?.company_name || branding?.active_company || "";
     
-    // Save to sessionStorage for persistence across navigation (important for mobile)
-    sessionStorage.setItem('currentCompany', currentCompany);
-    sessionStorage.setItem('compareCompany', compareCompany);
-    sessionStorage.setItem('tariffType', tariffType);
+    // Save to localStorage for persistence across navigation (important for PWA on Android)
+    localStorage.setItem('currentCompany', currentCompany);
+    localStorage.setItem('compareCompany', compareCompany);
+    localStorage.setItem('tariffType', tariffType);
     
-    navigate('/processing', { state: { file, currentCompany, compareCompany, tariffType } });
+    console.log('Saving to localStorage:', { currentCompany, compareCompany, tariffType });
+    
+    navigate('/processing', { state: { file: processedFile, currentCompany, compareCompany, tariffType } });
+  };
+
+  // Helper function to compress images
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Resize if too large (max 1920px)
+          const maxSize = 1920;
+          if (width > maxSize || height > maxSize) {
+            if (width > height) {
+              height = (height / width) * maxSize;
+              width = maxSize;
+            } else {
+              width = (width / height) * maxSize;
+              height = maxSize;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              } else {
+                reject(new Error('Failed to compress image'));
+              }
+            },
+            'image/jpeg',
+            0.85 // Quality (85%)
+          );
+        };
+        
+        img.onerror = () => reject(new Error('Failed to load image'));
+      };
+      
+      reader.onerror = () => reject(new Error('Failed to read file'));
+    });
   };
 
   const handlePdfClick = () => {

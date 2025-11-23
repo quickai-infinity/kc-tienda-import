@@ -131,10 +131,12 @@ const Processing = () => {
         }
 
         // Navigate to results with extracted data
-        // Get from sessionStorage as fallback for mobile (state can be lost)
-        const currentCompany = location.state?.currentCompany || sessionStorage.getItem('currentCompany') || "";
-        const compareCompany = location.state?.compareCompany || sessionStorage.getItem('compareCompany') || "";
-        const tariffType = location.state?.tariffType || sessionStorage.getItem('tariffType') || "electricity";
+        // Get from localStorage as fallback for PWA on Android (state can be lost)
+        const currentCompany = location.state?.currentCompany || localStorage.getItem('currentCompany') || "";
+        const compareCompany = location.state?.compareCompany || localStorage.getItem('compareCompany') || "";
+        const tariffType = location.state?.tariffType || localStorage.getItem('tariffType') || "electricity";
+        
+        console.log('Processing - Passing to results:', { currentCompany, compareCompany, tariffType });
         
         setTimeout(() => {
           navigate('/results', { 
