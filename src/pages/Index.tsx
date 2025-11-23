@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin } = useUserRole();
+  const { isSuperAdmin, isCompanyAdmin } = useUserRole();
   const { branding, companyBranding } = useBranding();
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -138,28 +138,79 @@ const Index = () => {
         }}
       />
 
-      {/* Top-right action: Login button OR Settings icon */}
-      {!isAuthenticated ? (
-        <button
-          onClick={() => navigate('/login')}
-          className="absolute top-6 right-4 px-4 py-2 text-sm font-medium transition-colors z-10"
-          style={{
-            color: companyBranding?.text_color || '#FFFFFF'
-          }}
-        >
-          Log in
-        </button>
-      ) : isAdmin && (
-        <button
-          onClick={() => navigate('/settings')}
-          className="absolute top-6 right-4 transition-colors z-10"
-          style={{
-            color: companyBranding?.text_color || '#FFFFFF'
-          }}
-        >
-          <Settings className="h-6 w-6" />
-        </button>
-      )}
+      {/* Top navigation */}
+      <div className="absolute top-6 right-4 flex items-center gap-4 z-10">
+        {!isAuthenticated ? (
+          <>
+            <button
+              onClick={() => navigate('/login')}
+              className="px-4 py-2 text-sm font-medium transition-colors"
+              style={{
+                color: companyBranding?.text_color || '#FFFFFF'
+              }}
+            >
+              Login
+            </button>
+            <button
+              onClick={() => navigate('/register')}
+              className="px-4 py-2 text-sm font-medium transition-colors"
+              style={{
+                color: companyBranding?.text_color || '#FFFFFF'
+              }}
+            >
+              Register
+            </button>
+          </>
+        ) : (
+          <>
+            {isSuperAdmin && (
+              <>
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="transition-colors"
+                  style={{
+                    color: companyBranding?.text_color || '#FFFFFF'
+                  }}
+                >
+                  <Settings className="h-6 w-6" />
+                </button>
+                <button
+                  onClick={() => navigate('/admin/tariffs')}
+                  className="px-3 py-1.5 text-sm font-medium transition-colors"
+                  style={{
+                    color: companyBranding?.text_color || '#FFFFFF'
+                  }}
+                >
+                  Tariffs
+                </button>
+              </>
+            )}
+            {isCompanyAdmin && (
+              <button
+                onClick={() => navigate('/admin/tariffs')}
+                className="px-3 py-1.5 text-sm font-medium transition-colors"
+                style={{
+                  color: companyBranding?.text_color || '#FFFFFF'
+                }}
+              >
+                My Tariffs
+              </button>
+            )}
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                navigate('/');
+              }}
+              className="px-3 py-1.5 text-sm font-medium transition-colors"
+              style={{
+                color: companyBranding?.text_color || '#FFFFFF'
+              }}
+            >
+              Logout
+            </button>
+          </>
+        )}
+      </div>
 
       <div className="flex-1 flex flex-col items-center justify-center">
         <div className="max-w-md w-full space-y-8 text-center">

@@ -49,13 +49,7 @@ const Register = () => {
 
       if (error) throw error;
 
-      // Insert user role as 'user' by default
-      if (data.user) {
-        await supabase.from("user_roles").insert({
-          user_id: data.user.id,
-          role: "user",
-        });
-      }
+      // Role is automatically assigned by database trigger (company_admin)
 
       toast({
         title: "Registro exitoso",

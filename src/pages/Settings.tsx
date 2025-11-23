@@ -43,8 +43,8 @@ const Settings = () => {
         return;
       }
       
-      // If authenticated but not admin, redirect to home
-      if (!roleLoading && role !== "admin") {
+      // If authenticated but not superadmin, redirect to home
+      if (!roleLoading && role !== "superadmin") {
         navigate("/");
       }
     };
@@ -191,7 +191,7 @@ const Settings = () => {
     }
   };
 
-  if (roleLoading || role !== "admin") {
+  if (roleLoading || role !== "superadmin") {
     return null;
   }
 
