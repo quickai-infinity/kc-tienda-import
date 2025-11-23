@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -294,6 +294,16 @@ const AdminTariffs = () => {
         <ArrowLeft className="h-6 w-6" />
         <span className="text-lg font-medium">Atrás</span>
       </button>
+
+      {isSuperAdmin && (
+        <button
+          onClick={() => navigate("/settings")}
+          className="absolute top-6 right-4 flex items-center gap-2 text-white transition-colors z-10"
+          title="Settings"
+        >
+          <Settings className="h-6 w-6" />
+        </button>
+      )}
 
       <div className="max-w-4xl mx-auto space-y-8 pt-16">
         <h1 className="text-3xl font-bold text-white text-center">Administración de Tarifas</h1>
