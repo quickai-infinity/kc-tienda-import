@@ -19,6 +19,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,6 +41,8 @@ const Index = () => {
   const [compareCompany, setCompareCompany] = useState<string>("");
   const [tariffType, setTariffType] = useState<"electricity" | "gas">("electricity");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -90,6 +100,44 @@ const Index = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // PWA Install Prompt Listener
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later
+      setDeferredPrompt(e);
+      // Show the install prompt dialog
+      setShowInstallPrompt(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+
+    // Show the install prompt
+    deferredPrompt.prompt();
+
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    console.log(`User response to the install prompt: ${outcome}`);
+
+    // Clear the deferredPrompt
+    setDeferredPrompt(null);
+    setShowInstallPrompt(false);
+  };
+
+  const handleInstallDismiss = () => {
+    setShowInstallPrompt(false);
+  };
 
   const handleFileSelect = async (file: File) => {
     if (!file) return;
@@ -585,6 +633,55 @@ const Index = () => {
       </div>
 
       <Footer />
+
+      {/* PWA Install Prompt Dialog */}
+      <Dialog open={showInstallPrompt} onOpenChange={setShowInstallPrompt}>
+        <DialogContent 
+          className="sm:max-w-md"
+          style={{ 
+            background: companyBranding?.background_color || '#003942',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle 
+              className="text-xl font-bold"
+              style={{ color: companyBranding?.text_color || '#FFFFFF' }}
+            >
+              Instalar aplicación
+            </DialogTitle>
+            <DialogDescription 
+              className="text-base"
+              style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}CC` : 'rgba(255, 255, 255, 0.8)' }}
+            >
+              Instala esta app en tu dispositivo para un acceso más rápido y una mejor experiencia
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={handleInstallDismiss}
+              className="w-full sm:w-auto"
+              style={{
+                borderColor: companyBranding?.text_color ? `${companyBranding.text_color}40` : 'rgba(255, 255, 255, 0.25)',
+                color: companyBranding?.text_color || '#FFFFFF'
+              }}
+            >
+              Ahora no
+            </Button>
+            <Button
+              onClick={handleInstallClick}
+              className="w-full sm:w-auto"
+              style={{ 
+                backgroundColor: companyBranding?.primary_color || '#0A8754',
+                color: '#FFFFFF'
+              }}
+            >
+              Instalar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
