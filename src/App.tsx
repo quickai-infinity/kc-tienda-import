@@ -14,6 +14,7 @@ import Processing from "./pages/Processing";
 import Results from "./pages/Results";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
+import BrandManager from "./pages/BrandManager";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/results" element={<Results />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/brand-manager" element={<BrandManager />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>

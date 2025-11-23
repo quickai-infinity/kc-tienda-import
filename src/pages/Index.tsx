@@ -19,7 +19,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAdmin } = useUserRole();
-  const { branding } = useBranding();
+  const { branding, companyBranding } = useBranding();
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentCompany, setCurrentCompany] = useState<string>("");
@@ -150,12 +150,12 @@ const Index = () => {
         </button>
       )}
 
-      {/* Logo in header */}
-      {branding?.logo_url && (
+      {/* Logo in header - prioritize company branding logo */}
+      {(companyBranding?.logo_url || branding?.logo_url) && (
         <div className="absolute top-6 left-4 z-10">
           <img 
-            src={branding.logo_url} 
-            alt={branding.app_name || "Logo"} 
+            src={companyBranding?.logo_url || branding?.logo_url || ""} 
+            alt={companyBranding?.company_name || branding?.app_name || "Logo"} 
             className="h-10 w-auto object-contain"
           />
         </div>
@@ -218,7 +218,8 @@ const Index = () => {
             <Button
               size="lg"
               onClick={handlePdfClick}
-              className="w-full h-16 text-xl rounded-2xl bg-[#0A8754] hover:bg-[#0A8754]/90 text-white shadow-lg"
+              style={{ backgroundColor: 'var(--brand-primary)' }}
+              className="w-full h-16 text-xl rounded-2xl text-white shadow-lg hover:opacity-90"
             >
               <Upload className="mr-3 h-6 w-6" />
               Seleccionar PDF
@@ -227,7 +228,8 @@ const Index = () => {
             <Button
               size="lg"
               onClick={handleCameraClick}
-              className="w-full h-16 text-xl rounded-2xl bg-[#FFC300] hover:bg-[#FFC300]/90 text-gray-900 shadow-lg"
+              style={{ backgroundColor: 'var(--brand-secondary)' }}
+              className="w-full h-16 text-xl rounded-2xl text-gray-900 shadow-lg hover:opacity-90"
             >
               <Camera className="mr-3 h-6 w-6" />
               Tomar foto
