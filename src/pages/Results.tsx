@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Download, Mail } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,6 @@ interface CompanyOption {
   id: string;
   name: string;
   pricePerMonth: string;
-  isBest?: boolean;
 }
 
 const Results = () => {
@@ -38,15 +37,17 @@ const Results = () => {
   }, [navigate]);
   
   const extractedData = location.state?.extractedData || {};
+  const currentCompany = location.state?.currentCompany;
+  const compareCompany = location.state?.compareCompany;
+  
   const savingsPerMonth = "32,47";
   const savingsPerYear = "389,64";
 
+  // Only show the two companies being compared
   const companies: CompanyOption[] = [
-    { id: "endesa", name: "Endesa", pricePerMonth: "30" },
-    { id: "repsol", name: "Repsol", pricePerMonth: "30", isBest: true },
-    { id: "iberdrola", name: "Iberdrola", pricePerMonth: "35" },
-    { id: "totalenergies", name: "TotalEnergies", pricePerMonth: "35" },
-  ];
+    currentCompany && { id: "current", name: currentCompany, pricePerMonth: "62,47" },
+    compareCompany && { id: "compare", name: compareCompany, pricePerMonth: "30" },
+  ].filter(Boolean) as CompanyOption[];
 
   const handleDownloadPDF = () => {
     toast({
@@ -140,34 +141,34 @@ const Results = () => {
 
         {/* Company Comparison Cards */}
         <div className="space-y-3 mt-12">
-          {companies.map((company) => (
-            <div
-              key={company.id}
-              className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 flex items-center justify-between transition-all duration-300 hover:bg-white/15 shadow-lg"
-              style={{
-                borderLeft: company.isBest ? "4px solid #FFC300" : "4px solid transparent",
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-lg font-semibold" style={{
+          {companies.length > 0 ? (
+            companies.map((company) => (
+              <div
+                key={company.id}
+                className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 flex items-center justify-between transition-all duration-300 hover:bg-white/15 shadow-lg"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-semibold" style={{
+                    color: companyBranding?.text_color || '#FFFFFF'
+                  }}>
+                    {company.name}
+                  </span>
+                </div>
+                
+                <div className="text-xl font-bold" style={{
                   color: companyBranding?.text_color || '#FFFFFF'
                 }}>
-                  {company.name}
-                </span>
-                {company.isBest && (
-                  <Badge className="bg-[#FFC300] text-gray-900 hover:bg-[#FFC300]/90 font-medium">
-                    Mejor
-                  </Badge>
-                )}
+                  {company.pricePerMonth} €/mes
+                </div>
               </div>
-              
-              <div className="text-xl font-bold" style={{
-                color: companyBranding?.text_color || '#FFFFFF'
-              }}>
-                {company.pricePerMonth} €/mes
-              </div>
+            ))
+          ) : (
+            <div className="text-center" style={{
+              color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)'
+            }}>
+              No se seleccionaron empresas para comparar
             </div>
-          ))}
+          )}
         </div>
 
         {/* Additional Info */}
