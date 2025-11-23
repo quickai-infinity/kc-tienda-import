@@ -2,11 +2,38 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Upload, Camera } from "lucide-react";
+import { Upload, Camera, ArrowLeft } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Index = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [currentCompany, setCurrentCompany] = useState<string>("");
+  const [compareCompany, setCompareCompany] = useState<string>("");
+
+  const companies = [
+    "Endesa",
+    "Repsol",
+    "Iberdrola",
+    "Naturgy",
+    "TotalEnergies",
+    "Lucera",
+    "Holaluz",
+  ];
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/login');
+    }
+  };
 
   useEffect(() => {
     // Check if user is authenticated
@@ -38,11 +65,68 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#003942] to-[#002F36] px-4">
-      <div className="max-w-md w-full space-y-8 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold text-white mb-12">
-          Subir factura para comparar
-        </h1>
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] px-4 py-6 relative">
+      {/* Back Button */}
+      <button
+        onClick={handleBack}
+        className="absolute top-6 left-4 flex items-center gap-2 text-white hover:text-white/80 transition-colors"
+      >
+        <ArrowLeft className="h-6 w-6" />
+        <span className="text-lg font-medium">Atrás</span>
+      </button>
+
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="max-w-md w-full space-y-8 text-center">
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-12">
+            Subir factura para comparar
+          </h1>
+
+          {/* Dropdown Selectors */}
+          <div className="space-y-4 mb-8">
+            <div className="space-y-2">
+              <label className="text-white text-sm font-medium block text-left">
+                Empresa actual
+              </label>
+              <Select value={currentCompany} onValueChange={setCurrentCompany}>
+                <SelectTrigger className="w-full h-14 bg-[#00404A] text-white border-none rounded-2xl shadow-lg text-lg">
+                  <SelectValue placeholder="Selecciona tu empresa" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#00404A] border-none rounded-2xl">
+                  {companies.map((company) => (
+                    <SelectItem
+                      key={company}
+                      value={company}
+                      className="text-white text-lg focus:bg-[#003942] focus:text-white"
+                    >
+                      {company}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-white text-sm font-medium block text-left">
+                Comparar con
+              </label>
+              <Select value={compareCompany} onValueChange={setCompareCompany}>
+                <SelectTrigger className="w-full h-14 bg-[#00404A] text-white border-none rounded-2xl shadow-lg text-lg">
+                  <SelectValue placeholder="Selecciona empresa a comparar" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#00404A] border-none rounded-2xl">
+                  {companies.map((company) => (
+                    <SelectItem
+                      key={company}
+                      value={company}
+                      className="text-white text-lg focus:bg-[#003942] focus:text-white"
+                    >
+                      {company}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
         <div className="space-y-4">
           <Button
@@ -78,6 +162,7 @@ const Index = () => {
             <div className="text-white text-sm font-semibold">Lucera</div>
             <div className="text-white text-sm font-semibold">Holaluz</div>
           </div>
+        </div>
         </div>
       </div>
     </div>
