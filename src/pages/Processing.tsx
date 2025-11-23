@@ -131,13 +131,18 @@ const Processing = () => {
         }
 
         // Navigate to results with extracted data
+        // Get from sessionStorage as fallback for mobile (state can be lost)
+        const currentCompany = location.state?.currentCompany || sessionStorage.getItem('currentCompany') || "";
+        const compareCompany = location.state?.compareCompany || sessionStorage.getItem('compareCompany') || "";
+        const tariffType = location.state?.tariffType || sessionStorage.getItem('tariffType') || "electricity";
+        
         setTimeout(() => {
           navigate('/results', { 
             state: { 
               extractedData,
-              currentCompany: location.state?.currentCompany,
-              compareCompany: location.state?.compareCompany,
-              tariffType: location.state?.tariffType || "electricity",
+              currentCompany,
+              compareCompany,
+              tariffType,
             } 
           });
         }, 4000);

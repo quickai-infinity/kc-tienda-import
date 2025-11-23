@@ -100,6 +100,12 @@ const Index = () => {
     // Navigate to processing with the file
     // Use active company from branding as currentCompany
     const currentCompany = companyBranding?.company_name || branding?.active_company || "";
+    
+    // Save to sessionStorage for persistence across navigation (important for mobile)
+    sessionStorage.setItem('currentCompany', currentCompany);
+    sessionStorage.setItem('compareCompany', compareCompany);
+    sessionStorage.setItem('tariffType', tariffType);
+    
     navigate('/processing', { state: { file, currentCompany, compareCompany, tariffType } });
   };
 
