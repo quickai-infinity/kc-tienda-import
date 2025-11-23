@@ -240,27 +240,28 @@ const Results = () => {
       doc.text("Datos de tu factura", 20, 70);
       
       doc.setFontSize(11);
-      doc.text(`Empresa actual: ${extractedData.empresa || 'N/A'}`, 20, 80);
-      doc.text(`Tarifa actual: ${extractedData.tarifa || 'N/A'}`, 20, 88);
-      doc.text(`Consumo mensual: ${extractedData.consumo_kwh || 'N/A'} kWh`, 20, 96);
-      doc.text(`Precio mensual estimado: ${extractedData.precio_mensual || 'N/A'} €`, 20, 104);
-      doc.text(`CUPS: ${extractedData.cups || 'N/A'}`, 20, 112);
+      doc.text(`Empresa actual: ${currentCompany || 'N/A'}`, 20, 80);
+      doc.text(`Comparando con: ${compareCompany || 'N/A'}`, 20, 88);
+      doc.text(`Tarifa actual: ${extractedData.tarifa || 'N/A'}`, 20, 96);
+      doc.text(`Consumo mensual: ${extractedData.consumo_kwh || 'N/A'} kWh`, 20, 104);
+      doc.text(`Precio mensual estimado: ${extractedData.precio_mensual || 'N/A'} €`, 20, 112);
+      doc.text(`CUPS: ${extractedData.cups || 'N/A'}`, 20, 120);
       
       // Savings section
       doc.setFontSize(16);
       doc.setTextColor(10, 135, 84); // Green
-      doc.text("Ahorro Estimado", 20, 130);
+      doc.text("Ahorro Estimado", 20, 138);
       
       doc.setFontSize(14);
-      doc.text(`${savingsPerMonth} €/mes`, 20, 142);
-      doc.text(`${savingsPerYear} €/año`, 20, 152);
+      doc.text(`${savingsPerMonth} €/mes`, 20, 150);
+      doc.text(`${savingsPerYear} €/año`, 20, 160);
       
       // Company comparison section
       doc.setFontSize(14);
       doc.setTextColor(0, 0, 0);
-      doc.text("Comparación de Empresas", 20, 170);
+      doc.text("Comparación de Empresas", 20, 178);
       
-      let yPosition = 180;
+      let yPosition = 188;
       companies.forEach((company, index) => {
         doc.setFontSize(11);
         const priceText = company.hasTariff && company.pricePerMonth !== null 
@@ -335,7 +336,11 @@ const Results = () => {
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Empresa actual:</span>
-              <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.empresa || 'N/A'}</span>
+              <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{currentCompany || 'N/A'}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Comparando con:</span>
+              <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{compareCompany || 'N/A'}</span>
             </div>
             <div className="flex justify-between items-center">
               <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Tarifa actual:</span>
