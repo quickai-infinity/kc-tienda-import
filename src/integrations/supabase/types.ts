@@ -258,6 +258,30 @@ export type Database = {
         }
         Relationships: []
       }
+      empresas: {
+        Row: {
+          color_primario: string | null
+          created_at: string | null
+          id: string
+          logo_url: string | null
+          nombre: string
+        }
+        Insert: {
+          color_primario?: string | null
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          nombre: string
+        }
+        Update: {
+          color_primario?: string | null
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          nombre?: string
+        }
+        Relationships: []
+      }
       facturas: {
         Row: {
           consumo_kwh: number
@@ -365,6 +389,38 @@ export type Database = {
           },
         ]
       }
+      servicios_adicionales: {
+        Row: {
+          empresa_id: string
+          id: string
+          nombre: string
+          precio_mensual: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          empresa_id: string
+          id?: string
+          nombre: string
+          precio_mensual?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          empresa_id?: string
+          id?: string
+          nombre?: string
+          precio_mensual?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "servicios_adicionales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sync_metrics: {
         Row: {
           completed_at: string | null
@@ -457,6 +513,91 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      tarifas_electricidad: {
+        Row: {
+          empresa_id: string
+          energia_p1: number | null
+          energia_p2: number | null
+          energia_p3: number | null
+          id: string
+          impuesto_electrico: number | null
+          iva: number | null
+          potencia_p1: number | null
+          potencia_p2: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          empresa_id: string
+          energia_p1?: number | null
+          energia_p2?: number | null
+          energia_p3?: number | null
+          id?: string
+          impuesto_electrico?: number | null
+          iva?: number | null
+          potencia_p1?: number | null
+          potencia_p2?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          empresa_id?: string
+          energia_p1?: number | null
+          energia_p2?: number | null
+          energia_p3?: number | null
+          id?: string
+          impuesto_electrico?: number | null
+          iva?: number | null
+          potencia_p1?: number | null
+          potencia_p2?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarifas_electricidad_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tarifas_gas: {
+        Row: {
+          empresa_id: string
+          id: string
+          iva: number | null
+          tarifa_atr: string | null
+          termino_fijo: number | null
+          termino_variable: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          empresa_id: string
+          id?: string
+          iva?: number | null
+          tarifa_atr?: string | null
+          termino_fijo?: number | null
+          termino_variable?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          empresa_id?: string
+          id?: string
+          iva?: number | null
+          tarifa_atr?: string | null
+          termino_fijo?: number | null
+          termino_variable?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarifas_gas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
