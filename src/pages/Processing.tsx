@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, ArrowLeft } from "lucide-react";
 
 interface ProcessingItem {
   id: string;
@@ -44,7 +44,17 @@ const Processing = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#003942] to-[#002F36] px-4">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] px-4 py-6 relative">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate('/')}
+        className="absolute top-6 left-4 flex items-center gap-2 text-white hover:text-white/80 transition-colors"
+      >
+        <ArrowLeft className="h-6 w-6" />
+        <span className="text-lg font-medium">Atrás</span>
+      </button>
+
+      <div className="flex-1 flex flex-col items-center justify-center">
       <div className="max-w-md w-full space-y-12 text-center">
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-8">
           Extrayendo información con IA…
@@ -87,6 +97,7 @@ const Processing = () => {
         <p className="text-white/60 text-sm mt-8">
           Esto puede tardar unos segundos...
         </p>
+        </div>
       </div>
     </div>
   );
