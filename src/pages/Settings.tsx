@@ -333,7 +333,15 @@ const Settings = () => {
           )}
 
           {/* Logo Upload */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 space-y-4 shadow-lg">
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 space-y-4 shadow-lg relative">
+            {uploading && (
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-10 gap-3">
+                <div className="w-12 h-12 border-4 border-[#0A8754] border-t-transparent rounded-full animate-spin" />
+                <p className="text-white font-semibold text-lg">Subiendo logo...</p>
+                <p className="text-white/70 text-sm">Por favor espera</p>
+              </div>
+            )}
+            
             <Label className="text-white text-sm font-medium">
               Logo de la empresa
             </Label>
@@ -361,10 +369,10 @@ const Settings = () => {
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               variant="outline"
-              className="w-full h-12 bg-[#00404A] text-white border-none rounded-xl hover:bg-[#003942]"
+              className="w-full h-12 bg-[#00404A] text-white border-none rounded-xl hover:bg-[#003942] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Upload className="mr-2 h-5 w-5" />
-              {uploading ? "Subiendo..." : "Subir logo"}
+              {uploading ? "Subiendo..." : "Subir nuevo logo"}
             </Button>
           </div>
 
