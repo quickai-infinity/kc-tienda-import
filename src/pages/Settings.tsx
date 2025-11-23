@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,8 @@ const Settings = () => {
   const [showOnlyMyCompany, setShowOnlyMyCompany] = useState(false);
   const [primaryColor, setPrimaryColor] = useState("#0A8754");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check authentication and redirect if needed
   useEffect(() => {
@@ -79,6 +81,88 @@ const Settings = () => {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Archivo no válido",
+        description: "Solo se permiten archivos de imagen",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Archivo muy grande",
+        description: "El logo no debe superar los 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Delete old logo if exists
+      if (branding?.logo_url) {
+        const oldPath = branding.logo_url.split('/').pop();
+        if (oldPath) {
+          await supabase.storage.from('logos').remove([oldPath]);
+        }
+      }
+
+      // Upload new logo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `logo-${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(fileName);
+
+      // Update branding table
+      const { error: updateError } = await supabase
+        .from("branding")
+        .update({ logo_url: publicUrl })
+        .eq("id", branding?.id);
+
+      if (updateError) throw updateError;
+
+      await refreshBranding();
+
+      toast({
+        title: "Logo actualizado",
+        description: "El logo se ha subido correctamente",
+      });
+    } catch (error: any) {
+      console.error("Error uploading logo:", error);
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo subir el logo",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -147,12 +231,34 @@ const Settings = () => {
             <Label className="text-white text-sm font-medium">
               Logo de la empresa
             </Label>
+            
+            {branding?.logo_url && (
+              <div className="flex items-center justify-center p-4 bg-white/5 rounded-xl">
+                <img 
+                  src={branding.logo_url} 
+                  alt="Logo actual" 
+                  className="max-h-20 max-w-full object-contain"
+                />
+              </div>
+            )}
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleLogoUpload}
+              className="hidden"
+            />
+            
             <Button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
               variant="outline"
               className="w-full h-12 bg-[#00404A] text-white border-none rounded-xl hover:bg-[#003942]"
             >
               <Upload className="mr-2 h-5 w-5" />
-              Subir logo
+              {uploading ? "Subiendo..." : "Subir logo"}
             </Button>
           </div>
 
