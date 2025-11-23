@@ -17,8 +17,9 @@ import { useToast } from "@/hooks/use-toast";
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin } = useUserRole();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentCompany, setCurrentCompany] = useState<string>("");
   const [compareCompany, setCompareCompany] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,6 +38,7 @@ const Index = () => {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
       if (!session) {
         navigate('/login');
       }
@@ -46,6 +48,7 @@ const Index = () => {
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session);
       if (!session) {
         navigate('/login');
       }
@@ -123,8 +126,15 @@ const Index = () => {
         }}
       />
 
-      {/* Settings Icon - Only visible for admins */}
-      {isAdmin && (
+      {/* Top-right action: Login button OR Settings icon */}
+      {!isAuthenticated ? (
+        <button
+          onClick={() => navigate('/login')}
+          className="absolute top-6 right-4 px-4 py-2 text-white text-sm font-medium hover:text-white/80 transition-colors z-10"
+        >
+          Log in
+        </button>
+      ) : isAdmin && (
         <button
           onClick={() => navigate('/settings')}
           className="absolute top-6 right-4 text-white hover:text-white/80 transition-colors z-10"
