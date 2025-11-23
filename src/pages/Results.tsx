@@ -65,15 +65,19 @@ const Results = () => {
   const [savingsPerMonth, setSavingsPerMonth] = useState<string>("0,00");
   const [savingsPerYear, setSavingsPerYear] = useState<string>("0,00");
   const [loading, setLoading] = useState(true);
-
-  const consumoKwh = parseFloat(extractedData.consumo_kwh) || 0;
-  const precioActual = parseFloat(extractedData.precio_mensual) || null;
+  const [hasCalculated, setHasCalculated] = useState(false);
 
   // Load tariffs and calculate prices
   useEffect(() => {
+    if (hasCalculated) return; // Evitar re-cálculos
+    
     const loadTariffsAndCalculate = async () => {
+      const consumoKwh = parseFloat(extractedData.consumo_kwh) || 0;
+      const precioActual = parseFloat(extractedData.precio_mensual) || null;
+
       if (!consumoKwh) {
         setLoading(false);
+        setHasCalculated(true);
         return;
       }
 
@@ -184,10 +188,11 @@ const Results = () => {
       }
 
       setLoading(false);
+      setHasCalculated(true);
     };
 
     loadTariffsAndCalculate();
-  }, [consumoKwh, precioActual, currentCompany, tariffType]);
+  }, [hasCalculated, extractedData.consumo_kwh, extractedData.precio_mensual, currentCompany, tariffType]);
 
   const handleDownloadPDF = async () => {
     try {
