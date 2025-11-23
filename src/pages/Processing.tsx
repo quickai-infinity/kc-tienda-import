@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, Circle, ArrowLeft } from "lucide-react";
+import Footer from "@/components/Footer";
 
 interface ProcessingItem {
   id: string;
@@ -99,6 +100,8 @@ const Processing = () => {
         </p>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 };

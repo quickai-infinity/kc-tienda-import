@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Upload, Camera } from "lucide-react";
+import { Upload, Camera, Settings } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Footer from "@/components/Footer";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -58,7 +59,16 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#003942] to-[#002F36] px-4">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] px-4 relative">
+      {/* Settings Icon */}
+      <button
+        onClick={() => navigate('/settings')}
+        className="absolute top-6 right-4 text-white hover:text-white/80 transition-colors z-10"
+      >
+        <Settings className="h-6 w-6" />
+      </button>
+
+      <div className="flex-1 flex flex-col items-center justify-center">
         <div className="max-w-md w-full space-y-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-12">
             Subir factura para comparar
@@ -146,7 +156,10 @@ const Index = () => {
             <div className="text-white text-sm font-semibold">Holaluz</div>
           </div>
         </div>
+        </div>
       </div>
+
+      <Footer />
     </div>
   );
 };

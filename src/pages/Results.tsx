@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import Footer from "@/components/Footer";
 
 interface CompanyOption {
   id: string;
@@ -22,16 +24,17 @@ const Results = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#003942] to-[#002F36] px-4 py-8 relative">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] px-4 py-8 relative">
       {/* Back Button */}
       <button
         onClick={() => navigate('/')}
-        className="absolute top-6 left-4 flex items-center gap-2 text-white hover:text-white/80 transition-colors"
+        className="absolute top-6 left-4 flex items-center gap-2 text-white hover:text-white/80 transition-colors z-10"
       >
         <ArrowLeft className="h-6 w-6" />
         <span className="text-lg font-medium">Atrás</span>
       </button>
 
+      <div className="flex-1">
       <div className="max-w-md mx-auto space-y-8">
         {/* Savings Header */}
         <div className="text-center space-y-4 pt-8">
@@ -81,7 +84,21 @@ const Results = () => {
         <div className="text-center text-white/60 text-sm mt-8">
           Comparación basada en tu consumo actual
         </div>
+
+        {/* Ver Historial Button */}
+        <div className="text-center mt-6">
+          <Button
+            onClick={() => navigate('/dashboard')}
+            variant="outline"
+            className="bg-white/10 text-white border-white/20 hover:bg-white/20"
+          >
+            Ver historial
+          </Button>
+        </div>
       </div>
+      </div>
+
+      <Footer />
     </div>
   );
 };
