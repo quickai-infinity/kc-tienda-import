@@ -2,109 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Definition of the design system. All colors MUST be HSL. */
 
 @layer base {
   :root {
-    /* KCTienda Tech Design System */
-    --background: 210 17% 98%;
-    --foreground: 210 11% 15%;
-
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
-    --card-foreground: 210 11% 15%;
-
+    --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 210 11% 15%;
-
-    /* Dark green primary - #344E41 */
-    --primary: 136 19% 28%;
-    --primary-foreground: 0 0% 100%;
-
-    /* Olive secondary - #588157 */
-    --secondary: 136 30% 43%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 136 10% 95%;
-    --muted-foreground: 136 5% 45%;
-
-    /* Bright accent for CTAs */
-    --accent: 136 50% 55%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 136 10% 88%;
-    --input: 136 10% 88%;
-    --ring: 136 30% 43%;
-
-    --radius: 0.75rem;
-
-    /* Custom design tokens */
-    --hero-gradient: linear-gradient(135deg, hsl(136 30% 43%), hsl(136 19% 28%));
-    --card-shadow: 0 4px 20px -2px hsl(136 30% 43% / 0.15);
-    --hover-shadow: 0 8px 30px -4px hsl(136 30% 43% / 0.25);
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --radius: 0.5rem;
   }
 
   .dark {
-    --background: 210 11% 15%;
-    --foreground: 210 17% 98%;
-
-    --card: 136 15% 20%;
-    --card-foreground: 210 17% 98%;
-
-    --popover: 136 15% 20%;
-    --popover-foreground: 210 17% 98%;
-
-    --primary: 136 50% 55%;
-    --primary-foreground: 210 11% 15%;
-
-    --secondary: 136 19% 28%;
-    --secondary-foreground: 210 17% 98%;
-
-    --muted: 136 10% 25%;
-    --muted-foreground: 136 10% 65%;
-
-    --accent: 136 50% 55%;
-    --accent-foreground: 210 11% 15%;
-
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 210 17% 98%;
-
-    --border: 136 10% 30%;
-    --input: 136 10% 30%;
-    --ring: 136 50% 55%;
-
-    --hero-gradient: linear-gradient(135deg, hsl(136 19% 28%), hsl(136 10% 18%));
-    --card-shadow: 0 4px 20px -2px hsl(0 0% 0% / 0.4);
-    --hover-shadow: 0 8px 30px -4px hsl(136 50% 55% / 0.3);
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
   }
 }
 
@@ -112,47 +55,12 @@ All colors MUST be HSL.
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-background text-foreground font-sans;
-    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    @apply bg-background text-foreground;
+    font-family: system-ui, -apple-system, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold;
-  }
-}
-
-@layer utilities {
-  .hero-gradient {
-    background: var(--hero-gradient);
-  }
-
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
-
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0px);
-    }
-    50% {
-      transform: translateY(-20px);
-    }
-  }
-
-  .animate-slide-up {
-    animation: slideUp 0.6s ease-out;
-  }
-
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    font-weight: 700;
   }
 }
