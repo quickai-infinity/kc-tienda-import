@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Upload, Camera, ArrowLeft } from "lucide-react";
+import { Upload, Camera } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -27,13 +27,6 @@ const Index = () => {
     "Holaluz",
   ];
 
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/login');
-    }
-  };
 
   useEffect(() => {
     // Check if user is authenticated
@@ -65,17 +58,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] px-4 py-6 relative">
-      {/* Back Button */}
-      <button
-        onClick={handleBack}
-        className="absolute top-6 left-4 flex items-center gap-2 text-white hover:text-white/80 transition-colors"
-      >
-        <ArrowLeft className="h-6 w-6" />
-        <span className="text-lg font-medium">Atrás</span>
-      </button>
-
-      <div className="flex-1 flex flex-col items-center justify-center">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#003942] to-[#002F36] px-4">
         <div className="max-w-md w-full space-y-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-12">
             Subir factura para comparar
@@ -162,7 +145,6 @@ const Index = () => {
             <div className="text-white text-sm font-semibold">Lucera</div>
             <div className="text-white text-sm font-semibold">Holaluz</div>
           </div>
-        </div>
         </div>
       </div>
     </div>
