@@ -76,10 +76,11 @@ const Register = () => {
 
       toast({
         title: "Registro exitoso",
-        description: "Ya puedes iniciar sesión con tu cuenta",
+        description: "Tu cuenta ha sido creada. Espera la aprobación del administrador para acceder.",
+        duration: 5000,
       });
 
-      navigate("/login");
+      navigate("/pending-approval");
     } catch (error: any) {
       toast({
         title: "Error de registro",
