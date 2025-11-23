@@ -132,25 +132,33 @@ const Results = () => {
 
       setCompanies(calculatedCompanies);
 
-      // Calculate savings correctly:
-      // currentCompany is the ACTUAL provider from the invoice (first in array)
-      // compareCompany is the COMPARISON company (second in array)
+      // Calculate savings: find which company is current and which is comparison
+      // Current company name comes from the invoice
+      const currentCompanyName = extractedData.empresa;
       
-      // For current company: prioritize invoice price, fallback to calculated
-      const currentPrice = precioActual || calculatedCompanies[0]?.pricePerMonth;
-      // For comparison company: use calculated price
-      const comparePrice = calculatedCompanies[1]?.pricePerMonth;
-
-      console.log("Savings calculation:", { 
-        currentPrice, 
-        comparePrice, 
-        precioActual,
-        company0: calculatedCompanies[0],
-        company1: calculatedCompanies[1]
+      // Find the prices by matching company names
+      let currentCompanyPrice = precioActual; // Default to invoice price
+      let compareCompanyPrice = null;
+      
+      calculatedCompanies.forEach((company) => {
+        if (company.name === currentCompanyName) {
+          // This is the current company - use invoice price preferentially
+          currentCompanyPrice = precioActual || company.pricePerMonth;
+        } else {
+          // This is the comparison company
+          compareCompanyPrice = company.pricePerMonth;
+        }
       });
 
-      if (currentPrice && comparePrice) {
-        const monthlyDiff = currentPrice - comparePrice;
+      console.log("Savings calculation v2:", { 
+        currentCompanyName,
+        currentCompanyPrice, 
+        compareCompanyPrice,
+        companies: calculatedCompanies
+      });
+
+      if (currentCompanyPrice && compareCompanyPrice) {
+        const monthlyDiff = currentCompanyPrice - compareCompanyPrice;
         // Only show positive savings (when switching would save money)
         if (monthlyDiff > 0) {
           setSavingsPerMonth(formatCurrency(monthlyDiff));
@@ -304,7 +312,7 @@ const Results = () => {
               <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.consumo_kwh || 'N/A'} kWh</span>
             </div>
             <div className="flex justify-between items-center">
-              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Precio mensual estimado:</span>
+              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Precio mensual:</span>
               <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.precio_mensual || 'N/A'} €</span>
             </div>
             <div className="flex justify-between items-center">
