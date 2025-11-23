@@ -101,33 +101,41 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check rate limiting
-    const { data: syncState } = await supabase
-      .from('sync_state')
-      .select('last_run, in_progress')
-      .eq('operation', 'update_products')
-      .single();
+    // Check rate limiting with database-level locking
+    const { data: syncState, error: lockError } = await supabase
+      .rpc('get_sync_state_with_lock', { operation_name: 'update_products' });
 
-    if (syncState) {
-      if (syncState.in_progress) {
+    if (lockError) {
+      // If we can't get the lock, another sync is in progress
+      return new Response(
+        JSON.stringify({ error: "Sync already in progress" }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (syncState && syncState.length > 0) {
+      const state = syncState[0];
+      if (state.in_progress) {
         return new Response(
           JSON.stringify({ error: "Sync already in progress" }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const lastRun = new Date(syncState.last_run);
-      const now = new Date();
-      const minutesSinceLastRun = (now.getTime() - lastRun.getTime()) / 1000 / 60;
+      if (state.last_run) {
+        const lastRunTime = new Date(state.last_run).getTime();
+        const nowTime = Date.now();
+        const minutesSinceLastRun = (nowTime - lastRunTime) / 1000 / 60;
 
-      if (minutesSinceLastRun < 5) {
-        return new Response(
-          JSON.stringify({ 
-            error: "Rate limit exceeded",
-            message: `Please wait ${Math.ceil(5 - minutesSinceLastRun)} minutes before syncing again`
-          }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        if (minutesSinceLastRun < 5) {
+          return new Response(
+            JSON.stringify({ 
+              error: "Rate limit exceeded",
+              message: `Please wait ${Math.ceil(5 - minutesSinceLastRun)} minutes before syncing again`
+            }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
     }
 
@@ -161,7 +169,8 @@ Deno.serve(async (req) => {
       .select('*');
 
     if (fetchError) {
-      console.error('Error fetching catalog items:', fetchError);
+      const errorId = crypto.randomUUID();
+      console.error(`Catalog fetch failed [${errorId}]`);
       await logOperation(supabase, 'update_products', 'error', 'Failed to fetch catalog', 0);
       throw new Error('Database operation failed');
     }
@@ -223,7 +232,8 @@ Deno.serve(async (req) => {
         });
 
       } catch (itemError) {
-        console.error(`Error processing item ${item.part_number}:`, itemError);
+        const errorId = crypto.randomUUID();
+        console.error(`Item processing failed [${errorId}] - SKU: ${item.part_number}`);
         stats.errors++;
       }
     }
@@ -239,7 +249,8 @@ Deno.serve(async (req) => {
         .select('id, sku');
 
       if (upsertError) {
-        console.error('Error in batch upsert:', upsertError);
+        const errorId = crypto.randomUUID();
+        console.error(`Batch upsert failed [${errorId}]`);
         stats.errors += productBatch.length;
       } else {
         // All records were upserted successfully
@@ -294,7 +305,8 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in updateProductsFromElsi:', error);
+    const errorId = crypto.randomUUID();
+    console.error(`Operation failed [${errorId}]`);
     const errorMessage = error instanceof Error ? error.message : String(error);
     const userMessage = error instanceof Error ? sanitizeError(error) : 'An error occurred';
     
