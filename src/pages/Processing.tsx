@@ -97,6 +97,10 @@ const Processing = () => {
 
         const extractedData: ExtractedData = result.data;
 
+        // Determine current company: use selected dropdown value or OCR extracted value
+        const selectedCompany = location.state?.selectedCompany || localStorage.getItem('selectedCompany') || "";
+        const currentCompany = selectedCompany || extractedData.empresa || "";
+
         // Update UI progressively
         setTimeout(() => updateItem("consumo"), 1000);
         setTimeout(() => updateItem("tarifa"), 2000);
@@ -107,8 +111,7 @@ const Processing = () => {
         if (!user) throw new Error('Usuario no autenticado');
 
         console.log("Saving factura with data:", {
-          empresa_actual: extractedData.empresa,
-          empresa_destino: location.state?.compareCompany,
+          empresa_actual: currentCompany,
           consumo_kwh: extractedData.consumo_kwh,
           precio_mensual: extractedData.precio_mensual
         });
@@ -117,8 +120,8 @@ const Processing = () => {
           .from('facturas')
           .insert({
             user_id: user.id,
-            empresa_actual: extractedData.empresa,
-            empresa_destino: location.state?.compareCompany || null,
+            empresa_actual: currentCompany,
+            empresa_destino: null,
             consumo_kwh: extractedData.consumo_kwh,
             potencia_kw: extractedData.potencia_kw || 4.6,
             precio_mensual_estimado: extractedData.precio_mensual,
@@ -131,19 +134,15 @@ const Processing = () => {
         }
 
         // Navigate to results with extracted data
-        // Get from localStorage as fallback for PWA on Android (state can be lost)
-        const currentCompany = location.state?.currentCompany || localStorage.getItem('currentCompany') || "";
-        const compareCompany = location.state?.compareCompany || localStorage.getItem('compareCompany') || "";
         const tariffType = location.state?.tariffType || localStorage.getItem('tariffType') || "electricity";
         
-        console.log('Processing - Passing to results:', { currentCompany, compareCompany, tariffType });
+        console.log('Processing - Passing to results:', { currentCompany, selectedCompany, extractedData_empresa: extractedData.empresa, tariffType });
         
         setTimeout(() => {
           navigate('/results', { 
             state: { 
               extractedData,
               currentCompany,
-              compareCompany,
               tariffType,
             } 
           });

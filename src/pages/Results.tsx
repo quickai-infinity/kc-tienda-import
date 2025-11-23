@@ -41,13 +41,11 @@ const Results = () => {
   
   const extractedData = location.state?.extractedData || {};
   // Get from localStorage as fallback for PWA on Android (state can be lost)
-  const currentCompany = location.state?.currentCompany || localStorage.getItem('currentCompany') || "";
-  const compareCompany = location.state?.compareCompany || localStorage.getItem('compareCompany') || "";
+  const currentCompany = location.state?.currentCompany || localStorage.getItem('selectedCompany') || extractedData.empresa || "";
   const tariffType = (location.state?.tariffType || localStorage.getItem('tariffType') || "electricity") as "electricity" | "gas";
   
   console.log('Results page - Received:', { 
     currentCompany, 
-    compareCompany, 
     tariffType,
     extractedEmpresa: extractedData.empresa 
   });
@@ -55,8 +53,7 @@ const Results = () => {
   // Clean up localStorage after reading
   useEffect(() => {
     return () => {
-      localStorage.removeItem('currentCompany');
-      localStorage.removeItem('compareCompany');
+      localStorage.removeItem('selectedCompany');
       localStorage.removeItem('tariffType');
     };
   }, []);
@@ -77,7 +74,8 @@ const Results = () => {
         return;
       }
 
-      const companiesToLoad = [currentCompany, compareCompany].filter(Boolean);
+      // Solo mostrar la empresa actual (no hay comparación múltiple)
+      const companiesToLoad = [currentCompany].filter(Boolean);
       const calculatedCompanies: CompanyOption[] = [];
 
       for (const companyName of companiesToLoad) {
@@ -153,63 +151,16 @@ const Results = () => {
 
       setCompanies(calculatedCompanies);
 
-      // Calculate savings: find which company is current and which is comparison
-      // Use the selected currentCompany, NOT the extracted empresa from OCR
-      const currentCompanyNameUpper = currentCompany?.toUpperCase();
-      const compareCompanyNameUpper = compareCompany?.toUpperCase();
-      
-      console.log('Calculating savings with:', {
-        currentCompanyNameUpper,
-        compareCompanyNameUpper,
-        calculatedCompanies: calculatedCompanies.map(c => ({ name: c.name, price: c.pricePerMonth }))
-      });
-      
-      // Find the prices by matching company names (case-insensitive)
-      let currentCompanyPrice = precioActual; // Default to invoice price
-      let compareCompanyPrice = null;
-      
-      calculatedCompanies.forEach((company) => {
-        const normalizedCompanyName = company.name?.toUpperCase();
-        
-        // Match against selected companies, not OCR extracted data
-        if (normalizedCompanyName === currentCompanyNameUpper && company.pricePerMonth !== null) {
-          // This is the current company - prefer calculated tariff over invoice price
-          currentCompanyPrice = company.pricePerMonth || precioActual;
-        } else if (normalizedCompanyName === compareCompanyNameUpper && company.pricePerMonth !== null) {
-          // This is the comparison company
-          compareCompanyPrice = company.pricePerMonth;
-        }
-      });
-
-      console.log("Savings calculation:", { 
-        currentCompany,
-        compareCompany,
-        currentCompanyPrice, 
-        compareCompanyPrice,
-        monthlyDiff: currentCompanyPrice && compareCompanyPrice ? currentCompanyPrice - compareCompanyPrice : 0
-      });
-
-      if (currentCompanyPrice && compareCompanyPrice) {
-        const monthlyDiff = currentCompanyPrice - compareCompanyPrice;
-        // Only show positive savings (when switching would save money)
-        if (monthlyDiff > 0) {
-          setSavingsPerMonth(formatCurrency(monthlyDiff));
-          setSavingsPerYear(formatCurrency(monthlyDiff * 12));
-        } else {
-          setSavingsPerMonth("0,00");
-          setSavingsPerYear("0,00");
-        }
-      } else {
-        // If we can't compare, show 0 savings
-        setSavingsPerMonth("0,00");
-        setSavingsPerYear("0,00");
-      }
+      // Simplemente mostrar el precio de la empresa actual
+      // No hay cálculo de ahorro porque solo mostramos una empresa
+      setSavingsPerMonth("0,00");
+      setSavingsPerYear("0,00");
 
       setLoading(false);
     };
 
     loadTariffsAndCalculate();
-  }, [extractedData, currentCompany, compareCompany, tariffType]);
+  }, [extractedData, currentCompany, tariffType]);
 
   const handleDownloadPDF = async () => {
     try {
@@ -267,8 +218,7 @@ const Results = () => {
       doc.text("Datos de tu factura", 20, 70);
       
       doc.setFontSize(11);
-      doc.text(`Empresa actual: ${currentCompany || 'N/A'}`, 20, 80);
-      doc.text(`Comparando con: ${compareCompany || 'N/A'}`, 20, 88);
+      doc.text(`Empresa: ${currentCompany || 'N/A'}`, 20, 80);
       doc.text(`Tarifa actual: ${extractedData.tarifa || 'N/A'}`, 20, 96);
       doc.text(`Consumo mensual: ${extractedData.consumo_kwh || 'N/A'} kWh`, 20, 104);
       doc.text(`Precio mensual estimado: ${extractedData.precio_mensual || 'N/A'} €`, 20, 112);
@@ -362,12 +312,8 @@ const Results = () => {
         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 space-y-3 shadow-lg">
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Empresa actual:</span>
+              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Empresa:</span>
               <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{currentCompany || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Comparando con:</span>
-              <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{compareCompany || 'N/A'}</span>
             </div>
             <div className="flex justify-between items-center">
               <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Tarifa actual:</span>
