@@ -149,8 +149,8 @@ const Results = () => {
 
   const handleDownloadPDF = () => {
     toast({
-      title: "Próximamente",
-      description: "Descarga de informe en PDF disponible próximamente.",
+      title: "Función en desarrollo",
+      description: "La generación de PDF estará disponible próximamente.",
     });
   };
 
