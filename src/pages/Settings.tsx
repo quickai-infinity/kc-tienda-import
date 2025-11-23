@@ -225,6 +225,14 @@ const Settings = () => {
             Brand Manager
           </Button>
 
+          {/* Tariff Management Link */}
+          <Button
+            onClick={() => navigate("/admin/tariffs")}
+            className="w-full h-14 bg-[#0A8754] hover:bg-[#0A8754]/90 text-white rounded-2xl shadow-lg font-semibold text-lg"
+          >
+            Gestión de Tarifas
+          </Button>
+
           {/* App Name */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 space-y-4 shadow-lg">
             <div className="space-y-2">
