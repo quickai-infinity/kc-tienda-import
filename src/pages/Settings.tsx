@@ -195,6 +195,13 @@ const Settings = () => {
 
       if (updateError) throw updateError;
 
+      // Forzar recarga completa de branding desde el servidor
+      await refreshBranding();
+
+      // Esperar un momento para que el servidor procese
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Refrescar una vez más para asegurar que tenemos la última versión
       await refreshBranding();
 
       toast({
@@ -349,9 +356,10 @@ const Settings = () => {
             {branding?.logo_url && (
               <div className="flex items-center justify-center p-4 bg-white/5 rounded-xl">
                 <img 
-                  src={branding.logo_url} 
+                  src={`${branding.logo_url}?t=${Date.now()}`}
                   alt="Logo actual" 
                   className="max-h-20 max-w-full object-contain"
+                  key={branding.logo_url}
                 />
               </div>
             )}
