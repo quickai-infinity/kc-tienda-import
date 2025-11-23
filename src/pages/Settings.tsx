@@ -91,17 +91,42 @@ const Settings = () => {
 
       if (error) throw error;
 
+      // Refresh branding to get latest data
       await refreshBranding();
-      
+
+      // Verify the change was applied by fetching the latest data
+      const { data: verifyData, error: verifyError } = await supabase
+        .from("branding")
+        .select("active_company")
+        .eq("id", branding?.id)
+        .single();
+
+      if (verifyError) {
+        throw new Error("No se pudo verificar el cambio");
+      }
+
+      // Check if active_company matches what we tried to save
+      const expectedValue = activeCompany || null;
+      const actualValue = verifyData.active_company;
+
+      if (actualValue !== expectedValue) {
+        throw new Error(
+          `Error de sincronización: Se intentó guardar "${expectedValue}" pero la base de datos muestra "${actualValue}"`
+        );
+      }
+
+      // Success - show specific confirmation message
       toast({
         title: "Configuración guardada",
-        description: "Los cambios se han aplicado correctamente.",
+        description: activeCompany 
+          ? `La empresa activa se cambió correctamente a ${activeCompany}` 
+          : "Se han aplicado los cambios correctamente.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving settings:", error);
       toast({
-        title: "Error",
-        description: "No se pudo guardar la configuración.",
+        title: "Error al guardar",
+        description: error.message || "No se pudo guardar la configuración.",
         variant: "destructive",
       });
     } finally {
