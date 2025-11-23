@@ -66,6 +66,15 @@ const Login = () => {
         ? `linear-gradient(to bottom, ${companyBranding.background_color}, ${companyBranding.background_color})`
         : 'linear-gradient(to bottom, #003942, #002F36)'
     }}>
+      {/* Back Button */}
+      <button
+        onClick={() => navigate("/")}
+        className="absolute top-6 left-4 flex items-center gap-2 text-white transition-colors z-10"
+      >
+        <span className="text-lg">←</span>
+        <span className="text-lg font-medium">Atrás</span>
+      </button>
+
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
