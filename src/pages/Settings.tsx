@@ -242,13 +242,13 @@ const Settings = () => {
               <Label className="text-white text-sm font-medium">
                 Empresa activa
               </Label>
-              <Select value={activeCompany} onValueChange={setActiveCompany}>
+              <Select value={activeCompany || "none"} onValueChange={(value) => setActiveCompany(value === "none" ? "" : value)}>
                 <SelectTrigger className="bg-[#00404A] text-white border-none rounded-xl h-12">
                   <SelectValue placeholder="Ninguna (usar colores por defecto)" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#00404A] border-none rounded-xl">
                   <SelectItem
-                    value=""
+                    value="none"
                     className="text-white focus:bg-[#003942] focus:text-white"
                   >
                     Ninguna (usar colores por defecto)
