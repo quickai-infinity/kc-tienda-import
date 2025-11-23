@@ -74,6 +74,20 @@ const Register = () => {
 
       // Role is automatically assigned by database trigger (company_admin)
 
+      // Send notification email to admin (non-blocking)
+      try {
+        await supabase.functions.invoke('notify-new-user', {
+          body: {
+            userEmail: result.data.email,
+            appUrl: window.location.origin
+          }
+        });
+        console.log('Admin notification email sent');
+      } catch (emailError) {
+        console.error('Failed to send admin notification:', emailError);
+        // Don't block registration if email fails
+      }
+
       toast({
         title: "Registro exitoso",
         description: "Tu cuenta ha sido creada. Espera la aprobación del administrador para acceder.",
