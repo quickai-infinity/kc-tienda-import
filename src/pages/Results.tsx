@@ -409,14 +409,14 @@ const Results = () => {
           </Button>
         </div>
 
-        {/* Ver Historial Button */}
+        {/* Comparativas Button */}
         <div className="text-center mt-6">
           <Button
             onClick={() => navigate('/dashboard')}
             variant="outline"
             className="bg-white/10 text-white border-white/20 hover:bg-white/20"
           >
-            Ver historial
+            Comparativas atendidas
           </Button>
         </div>
       </div>
