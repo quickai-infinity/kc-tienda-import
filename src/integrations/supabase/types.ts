@@ -19,7 +19,7 @@ export type Database = {
           action: string
           created_at: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           new_values: Json | null
           old_values: Json | null
           record_id: string | null
@@ -31,7 +31,7 @@ export type Database = {
           action: string
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_values?: Json | null
           old_values?: Json | null
           record_id?: string | null
@@ -43,7 +43,7 @@ export type Database = {
           action?: string
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_values?: Json | null
           old_values?: Json | null
           record_id?: string | null
@@ -334,10 +334,7 @@ export type Database = {
       }
     }
     Functions: {
-      cleanup_old_logs: {
-        Args: { days_to_keep?: number }
-        Returns: number
-      }
+      cleanup_old_logs: { Args: { days_to_keep?: number }; Returns: number }
       decrypt_sensitive: {
         Args: { encrypted_data: string; key?: string }
         Returns: string
