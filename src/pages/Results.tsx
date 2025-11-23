@@ -132,11 +132,13 @@ const Results = () => {
 
       setCompanies(calculatedCompanies);
 
-      // Calculate savings
-      // First company is current provider (from invoice)
-      // Use invoice price if no tariff data, otherwise use calculated price
-      const currentPrice = calculatedCompanies[0]?.pricePerMonth ?? precioActual;
-      // Second company is comparison company (from dropdown)
+      // Calculate savings correctly:
+      // currentCompany is the ACTUAL provider from the invoice (first in array)
+      // compareCompany is the COMPARISON company (second in array)
+      
+      // For current company: prioritize invoice price, fallback to calculated
+      const currentPrice = precioActual || calculatedCompanies[0]?.pricePerMonth;
+      // For comparison company: use calculated price
       const comparePrice = calculatedCompanies[1]?.pricePerMonth;
 
       console.log("Savings calculation:", { 
@@ -149,10 +151,16 @@ const Results = () => {
 
       if (currentPrice && comparePrice) {
         const monthlyDiff = currentPrice - comparePrice;
-        setSavingsPerMonth(formatCurrency(Math.abs(monthlyDiff)));
-        setSavingsPerYear(formatCurrency(Math.abs(monthlyDiff * 12)));
-      } else if (!comparePrice && currentPrice) {
-        // If comparison company has no tariff, show 0 savings
+        // Only show positive savings (when switching would save money)
+        if (monthlyDiff > 0) {
+          setSavingsPerMonth(formatCurrency(monthlyDiff));
+          setSavingsPerYear(formatCurrency(monthlyDiff * 12));
+        } else {
+          setSavingsPerMonth("0,00");
+          setSavingsPerYear("0,00");
+        }
+      } else {
+        // If we can't compare, show 0 savings
         setSavingsPerMonth("0,00");
         setSavingsPerYear("0,00");
       }
