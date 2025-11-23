@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Download, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,12 @@ interface CompanyOption {
 
 const Results = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [email, setEmail] = useState("");
+  
+  const extractedData = location.state?.extractedData || {};
   const savingsPerMonth = "32,47";
   const savingsPerYear = "389,64";
 
@@ -60,11 +63,43 @@ const Results = () => {
 
       <div className="flex-1">
       <div className="max-w-md mx-auto space-y-8">
-        {/* Savings Header */}
+        {/* Extracted Data Summary */}
         <div className="text-center space-y-4 pt-8">
           <h1 className="text-2xl md:text-3xl font-bold text-white">
-            Podrías ahorrar:
+            Datos de tu factura
           </h1>
+        </div>
+
+        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 space-y-3 shadow-lg">
+          <div className="space-y-2 text-white">
+            <div className="flex justify-between items-center">
+              <span className="text-white/70">Empresa actual:</span>
+              <span className="font-semibold">{extractedData.empresa || 'N/A'}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-white/70">Tarifa actual:</span>
+              <span className="font-semibold">{extractedData.tarifa || 'N/A'}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-white/70">Consumo mensual:</span>
+              <span className="font-semibold">{extractedData.consumo_kwh || 'N/A'} kWh</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-white/70">Precio mensual estimado:</span>
+              <span className="font-semibold">{extractedData.precio_mensual || 'N/A'} €</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-white/70">CUPS:</span>
+              <span className="font-semibold text-sm">{extractedData.cups || 'N/A'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Savings Header */}
+        <div className="text-center space-y-4 pt-4">
+          <h2 className="text-xl md:text-2xl font-bold text-white">
+            Podrías ahorrar:
+          </h2>
           
           <div className="space-y-2">
             <div className="text-5xl md:text-6xl font-bold text-[#0A8754]">
