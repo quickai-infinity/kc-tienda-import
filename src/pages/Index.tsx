@@ -117,16 +117,13 @@ const Index = () => {
 
     // Navigate to processing with the file
     // Use active company from branding as currentCompany
-    const currentCompany = companyBranding?.company_name || branding?.active_company || "";
-    
-    // Save to localStorage for persistence across navigation (important for PWA on Android)
-    localStorage.setItem('currentCompany', currentCompany);
-    localStorage.setItem('compareCompany', compareCompany);
+    // Save selected company to localStorage for persistence (PWA on Android)
+    localStorage.setItem('selectedCompany', compareCompany);
     localStorage.setItem('tariffType', tariffType);
     
-    console.log('Saving to localStorage:', { currentCompany, compareCompany, tariffType });
+    console.log('Saving to localStorage:', { selectedCompany: compareCompany, tariffType });
     
-    navigate('/processing', { state: { file: processedFile, currentCompany, compareCompany, tariffType } });
+    navigate('/processing', { state: { file: processedFile, selectedCompany: compareCompany, tariffType } });
   };
 
   // Helper function to compress images
