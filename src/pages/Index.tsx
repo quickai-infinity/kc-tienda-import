@@ -149,7 +149,7 @@ const Index = () => {
                 color: companyBranding?.text_color || '#FFFFFF'
               }}
             >
-              Login
+              Iniciar sesión
             </button>
             <button
               onClick={() => navigate('/register')}
@@ -158,44 +158,31 @@ const Index = () => {
                 color: companyBranding?.text_color || '#FFFFFF'
               }}
             >
-              Register
+              Registrarse
             </button>
           </>
         ) : (
           <>
             {isSuperAdmin && (
-              <>
-                <button
-                  onClick={() => navigate('/settings')}
-                  className="transition-colors"
-                  style={{
-                    color: companyBranding?.text_color || '#FFFFFF'
-                  }}
-                >
-                  <Settings className="h-6 w-6" />
-                </button>
-                <button
-                  onClick={() => navigate('/admin/tariffs')}
-                  className="px-3 py-1.5 text-sm font-medium transition-colors"
-                  style={{
-                    color: companyBranding?.text_color || '#FFFFFF'
-                  }}
-                >
-                  Tariffs
-                </button>
-              </>
-            )}
-            {isCompanyAdmin && (
               <button
-                onClick={() => navigate('/admin/tariffs')}
-                className="px-3 py-1.5 text-sm font-medium transition-colors"
+                onClick={() => navigate('/settings')}
+                className="transition-colors"
                 style={{
                   color: companyBranding?.text_color || '#FFFFFF'
                 }}
               >
-                My Tariffs
+                <Settings className="h-6 w-6" />
               </button>
             )}
+            <button
+              onClick={() => navigate('/admin/tariffs')}
+              className="px-3 py-1.5 text-sm font-medium transition-colors"
+              style={{
+                color: companyBranding?.text_color || '#FFFFFF'
+              }}
+            >
+              Edición de tarifas
+            </button>
             <button
               onClick={async () => {
                 await supabase.auth.signOut();
@@ -206,7 +193,7 @@ const Index = () => {
                 color: companyBranding?.text_color || '#FFFFFF'
               }}
             >
-              Logout
+              Cerrar sesión
             </button>
           </>
         )}
