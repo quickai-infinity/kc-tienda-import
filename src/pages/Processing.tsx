@@ -128,6 +128,7 @@ const Processing = () => {
               extractedData,
               currentCompany: location.state?.currentCompany,
               compareCompany: location.state?.compareCompany,
+              tariffType: location.state?.tariffType || "electricity",
             } 
           });
         }, 4000);

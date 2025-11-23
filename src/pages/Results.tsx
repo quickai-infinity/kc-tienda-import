@@ -10,7 +10,7 @@ import { useBranding } from "@/contexts/BrandingContext";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Footer from "@/components/Footer";
-import { calculateMonthlyElectricityPrice, formatCurrency } from "@/utils/tariffCalculations";
+import { calculateMonthlyElectricityPrice, calculateMonthlyGasPrice, formatCurrency } from "@/utils/tariffCalculations";
 
 interface CompanyOption {
   id: string;
@@ -41,6 +41,7 @@ const Results = () => {
   const extractedData = location.state?.extractedData || {};
   const currentCompany = location.state?.currentCompany;
   const compareCompany = location.state?.compareCompany;
+  const tariffType = location.state?.tariffType || "electricity";
   
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [savingsPerMonth, setSavingsPerMonth] = useState<string>("0,00");
@@ -79,24 +80,46 @@ const Results = () => {
           continue;
         }
 
-        // Get tariff
-        const { data: tarifa } = await supabase
-          .from("tarifas_electricidad")
-          .select("*")
-          .eq("empresa_id", empresa.id)
-          .single();
+        // Get tariff based on tariff type
+        let calculatedPrice: number | null = null;
 
-        if (!tarifa) {
-          calculatedCompanies.push({
-            id: empresa.id,
-            name: companyName || "",
-            pricePerMonth: null,
-            hasTariff: false,
-          });
-          continue;
+        if (tariffType === "electricity") {
+          const { data: tarifaElec } = await supabase
+            .from("tarifas_electricidad")
+            .select("*")
+            .eq("empresa_id", empresa.id)
+            .single();
+
+          if (!tarifaElec) {
+            calculatedCompanies.push({
+              id: empresa.id,
+              name: companyName || "",
+              pricePerMonth: null,
+              hasTariff: false,
+            });
+            continue;
+          }
+
+          calculatedPrice = calculateMonthlyElectricityPrice(consumoKwh, tarifaElec);
+        } else {
+          const { data: tarifaGas } = await supabase
+            .from("tarifas_gas")
+            .select("*")
+            .eq("empresa_id", empresa.id)
+            .single();
+
+          if (!tarifaGas) {
+            calculatedCompanies.push({
+              id: empresa.id,
+              name: companyName || "",
+              pricePerMonth: null,
+              hasTariff: false,
+            });
+            continue;
+          }
+
+          calculatedPrice = calculateMonthlyGasPrice(consumoKwh, tarifaGas);
         }
-
-        const calculatedPrice = calculateMonthlyElectricityPrice(consumoKwh, tarifa);
 
         calculatedCompanies.push({
           id: empresa.id,
@@ -122,7 +145,7 @@ const Results = () => {
     };
 
     loadTariffsAndCalculate();
-  }, [extractedData, currentCompany, compareCompany]);
+  }, [extractedData, currentCompany, compareCompany, tariffType]);
 
   const handleDownloadPDF = () => {
     toast({

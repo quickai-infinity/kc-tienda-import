@@ -8,6 +8,12 @@ interface TarifaElectricidad {
   iva: number | null;
 }
 
+interface TarifaGas {
+  termino_fijo: number | null;
+  termino_variable: number | null;
+  iva: number | null;
+}
+
 const DEFAULT_CONTRACTED_POWER = 4.6; // kW
 
 export const calculateMonthlyElectricityPrice = (
@@ -38,6 +44,32 @@ export const calculateMonthlyElectricityPrice = (
   }
 
   // 5. Apply IVA
+  if (tarifa.iva) {
+    subtotal = subtotal * (1 + tarifa.iva / 100);
+  }
+
+  return subtotal;
+};
+
+export const calculateMonthlyGasPrice = (
+  consumoKwh: number,
+  tarifa: TarifaGas
+): number | null => {
+  // If no variable price configured, can't calculate
+  if (!tarifa.termino_variable) {
+    return null;
+  }
+
+  // 1. Calculate variable cost
+  const variableCost = consumoKwh * tarifa.termino_variable;
+
+  // 2. Add fixed term (monthly)
+  let subtotal = variableCost;
+  if (tarifa.termino_fijo) {
+    subtotal += tarifa.termino_fijo;
+  }
+
+  // 3. Apply IVA
   if (tarifa.iva) {
     subtotal = subtotal * (1 + tarifa.iva / 100);
   }

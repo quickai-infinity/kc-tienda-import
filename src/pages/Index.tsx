@@ -23,6 +23,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [compareCompany, setCompareCompany] = useState<string>("");
+  const [tariffType, setTariffType] = useState<"electricity" | "gas">("electricity");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -91,7 +92,7 @@ const Index = () => {
     // Navigate to processing with the file
     // Use active company from branding as currentCompany
     const currentCompany = companyBranding?.company_name || branding?.active_company || "";
-    navigate('/processing', { state: { file, currentCompany, compareCompany } });
+    navigate('/processing', { state: { file, currentCompany, compareCompany, tariffType } });
   };
 
   const handlePdfClick = () => {
@@ -294,6 +295,34 @@ const Index = () => {
                   {company}
                 </div>
               ))}
+            </div>
+
+            {/* Tariff Type Selector */}
+            <div className="mt-8 space-y-2">
+              <label className="text-sm font-medium block text-center" style={{
+                color: companyBranding?.text_color || '#FFFFFF'
+              }}>
+                Tariff type
+              </label>
+              <Select value={tariffType} onValueChange={(value: "electricity" | "gas") => setTariffType(value)}>
+                <SelectTrigger className="w-full h-12 bg-[#00404A] text-white border-none rounded-2xl shadow-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#00404A] border-none rounded-2xl">
+                  <SelectItem
+                    value="electricity"
+                    className="text-white focus:bg-[#003942] focus:text-white"
+                  >
+                    Electricity
+                  </SelectItem>
+                  <SelectItem
+                    value="gas"
+                    className="text-white focus:bg-[#003942] focus:text-white"
+                  >
+                    Gas
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
