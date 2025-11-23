@@ -40,9 +40,19 @@ const Results = () => {
   }, [navigate]);
   
   const extractedData = location.state?.extractedData || {};
-  const currentCompany = location.state?.currentCompany;
-  const compareCompany = location.state?.compareCompany;
-  const tariffType = location.state?.tariffType || "electricity";
+  // Get from sessionStorage as fallback for mobile devices (state can be lost)
+  const currentCompany = location.state?.currentCompany || sessionStorage.getItem('currentCompany') || "";
+  const compareCompany = location.state?.compareCompany || sessionStorage.getItem('compareCompany') || "";
+  const tariffType = (location.state?.tariffType || sessionStorage.getItem('tariffType') || "electricity") as "electricity" | "gas";
+  
+  // Clean up sessionStorage after reading
+  useEffect(() => {
+    return () => {
+      sessionStorage.removeItem('currentCompany');
+      sessionStorage.removeItem('compareCompany');
+      sessionStorage.removeItem('tariffType');
+    };
+  }, []);
   
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [savingsPerMonth, setSavingsPerMonth] = useState<string>("0,00");
