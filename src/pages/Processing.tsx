@@ -170,7 +170,7 @@ const Processing = () => {
           <h1 className="text-3xl md:text-4xl font-bold mb-8" style={{
             color: companyBranding?.text_color || '#FFFFFF'
           }}>
-            Extrayendo información con IA…
+            Extrayendo datos…
           </h1>
 
           {/* Loader Animation */}
