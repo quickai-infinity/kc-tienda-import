@@ -91,6 +91,41 @@ export type Database = {
           },
         ]
       }
+      comparaciones: {
+        Row: {
+          ahorro_estimado: number | null
+          created_at: string
+          empresa: string
+          factura_id: string
+          id: string
+          precio_estimado: number
+        }
+        Insert: {
+          ahorro_estimado?: number | null
+          created_at?: string
+          empresa: string
+          factura_id: string
+          id?: string
+          precio_estimado: number
+        }
+        Update: {
+          ahorro_estimado?: number | null
+          created_at?: string
+          empresa?: string
+          factura_id?: string
+          id?: string
+          precio_estimado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comparaciones_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       elsi_catalog_temp: {
         Row: {
           brand: string | null
@@ -151,6 +186,39 @@ export type Database = {
           operation?: string
           records_processed?: number | null
           status?: string
+        }
+        Relationships: []
+      }
+      facturas: {
+        Row: {
+          consumo_kwh: number
+          created_at: string
+          empresa_actual: string
+          empresa_destino: string | null
+          id: string
+          potencia_kw: number
+          precio_mensual_estimado: number | null
+          user_id: string
+        }
+        Insert: {
+          consumo_kwh: number
+          created_at?: string
+          empresa_actual: string
+          empresa_destino?: string | null
+          id?: string
+          potencia_kw: number
+          precio_mensual_estimado?: number | null
+          user_id: string
+        }
+        Update: {
+          consumo_kwh?: number
+          created_at?: string
+          empresa_actual?: string
+          empresa_destino?: string | null
+          id?: string
+          potencia_kw?: number
+          precio_mensual_estimado?: number | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -294,6 +362,30 @@ export type Database = {
           in_progress?: boolean | null
           last_run?: string | null
           operation?: string
+        }
+        Relationships: []
+      }
+      tarifas: {
+        Row: {
+          empresa: string
+          id: string
+          potencia_fija: number
+          precio_kwh: number
+          updated_at: string
+        }
+        Insert: {
+          empresa: string
+          id?: string
+          potencia_fija: number
+          precio_kwh: number
+          updated_at?: string
+        }
+        Update: {
+          empresa?: string
+          id?: string
+          potencia_fija?: number
+          precio_kwh?: number
+          updated_at?: string
         }
         Relationships: []
       }
