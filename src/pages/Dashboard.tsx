@@ -42,7 +42,10 @@ const Dashboard = () => {
       {/* Back Button */}
       <button
         onClick={() => navigate('/')}
-        className="absolute top-6 left-4 flex items-center gap-2 text-white hover:text-white/80 transition-colors z-10"
+        className="absolute top-6 left-4 flex items-center gap-2 transition-colors z-10"
+        style={{
+          color: companyBranding?.text_color || '#FFFFFF'
+        }}
       >
         <ArrowLeft className="h-6 w-6" />
         <span className="text-lg font-medium">Atrás</span>
@@ -62,7 +65,9 @@ const Dashboard = () => {
       {/* Main Content */}
       <div className="flex-1 px-4 py-20">
         <div className="max-w-md mx-auto space-y-6">
-          <h1 className="text-3xl md:text-4xl font-bold text-white text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-center mb-8" style={{
+            color: companyBranding?.text_color || '#FFFFFF'
+          }}>
             Clientes atendidos
           </h1>
 
@@ -72,7 +77,9 @@ const Dashboard = () => {
                 key={client.id}
                 className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 flex items-center justify-between hover:bg-white/15 transition-all shadow-lg"
               >
-                <span className="text-lg font-semibold text-white">
+                <span className="text-lg font-semibold" style={{
+                  color: companyBranding?.text_color || '#FFFFFF'
+                }}>
                   {client.name}
                 </span>
                 <span className="text-xl font-bold text-[#0A8754]">

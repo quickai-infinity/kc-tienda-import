@@ -73,7 +73,10 @@ const Results = () => {
       {/* Back Button */}
       <button
         onClick={() => navigate('/')}
-        className="absolute top-6 left-4 flex items-center gap-2 text-white hover:text-white/80 transition-colors z-10"
+        className="absolute top-6 left-4 flex items-center gap-2 transition-colors z-10"
+        style={{
+          color: companyBranding?.text_color || '#FFFFFF'
+        }}
       >
         <ArrowLeft className="h-6 w-6" />
         <span className="text-lg font-medium">Atrás</span>
@@ -83,39 +86,43 @@ const Results = () => {
       <div className="max-w-md mx-auto space-y-8">
         {/* Extracted Data Summary */}
         <div className="text-center space-y-4 pt-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-white">
+          <h1 className="text-2xl md:text-3xl font-bold" style={{
+            color: companyBranding?.text_color || '#FFFFFF'
+          }}>
             Datos de tu factura
           </h1>
         </div>
 
         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 space-y-3 shadow-lg">
-          <div className="space-y-2 text-white">
+          <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-white/70">Empresa actual:</span>
-              <span className="font-semibold">{extractedData.empresa || 'N/A'}</span>
+              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Empresa actual:</span>
+              <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.empresa || 'N/A'}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-white/70">Tarifa actual:</span>
-              <span className="font-semibold">{extractedData.tarifa || 'N/A'}</span>
+              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Tarifa actual:</span>
+              <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.tarifa || 'N/A'}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-white/70">Consumo mensual:</span>
-              <span className="font-semibold">{extractedData.consumo_kwh || 'N/A'} kWh</span>
+              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Consumo mensual:</span>
+              <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.consumo_kwh || 'N/A'} kWh</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-white/70">Precio mensual estimado:</span>
-              <span className="font-semibold">{extractedData.precio_mensual || 'N/A'} €</span>
+              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Precio mensual estimado:</span>
+              <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.precio_mensual || 'N/A'} €</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-white/70">CUPS:</span>
-              <span className="font-semibold text-sm">{extractedData.cups || 'N/A'}</span>
+              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>CUPS:</span>
+              <span className="font-semibold text-sm" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.cups || 'N/A'}</span>
             </div>
           </div>
         </div>
 
         {/* Savings Header */}
         <div className="text-center space-y-4 pt-4">
-          <h2 className="text-xl md:text-2xl font-bold text-white">
+          <h2 className="text-xl md:text-2xl font-bold" style={{
+            color: companyBranding?.text_color || '#FFFFFF'
+          }}>
             Podrías ahorrar:
           </h2>
           
@@ -123,7 +130,9 @@ const Results = () => {
             <div className="text-5xl md:text-6xl font-bold text-[#0A8754]">
               {savingsPerMonth} €/mes
             </div>
-            <div className="text-xl md:text-2xl text-white/80 font-medium">
+            <div className="text-xl md:text-2xl font-medium" style={{
+              color: companyBranding?.text_color ? `${companyBranding.text_color}CC` : 'rgba(255, 255, 255, 0.8)'
+            }}>
               {savingsPerYear} €/año
             </div>
           </div>
@@ -140,7 +149,9 @@ const Results = () => {
               }}
             >
               <div className="flex items-center gap-3">
-                <span className="text-lg font-semibold text-white">
+                <span className="text-lg font-semibold" style={{
+                  color: companyBranding?.text_color || '#FFFFFF'
+                }}>
                   {company.name}
                 </span>
                 {company.isBest && (
@@ -150,7 +161,9 @@ const Results = () => {
                 )}
               </div>
               
-              <div className="text-xl font-bold text-white">
+              <div className="text-xl font-bold" style={{
+                color: companyBranding?.text_color || '#FFFFFF'
+              }}>
                 {company.pricePerMonth} €/mes
               </div>
             </div>
@@ -158,7 +171,9 @@ const Results = () => {
         </div>
 
         {/* Additional Info */}
-        <div className="text-center text-white/60 text-sm mt-8">
+        <div className="text-center text-sm mt-8" style={{
+          color: companyBranding?.text_color ? `${companyBranding.text_color}99` : 'rgba(255, 255, 255, 0.6)'
+        }}>
           Comparación basada en tu consumo actual
         </div>
 

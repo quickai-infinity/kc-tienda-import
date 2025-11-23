@@ -155,7 +155,10 @@ const Processing = () => {
       {/* Back Button */}
       <button
         onClick={() => navigate('/')}
-        className="absolute top-6 left-4 flex items-center gap-2 text-white hover:text-white/80 transition-colors z-10"
+        className="absolute top-6 left-4 flex items-center gap-2 transition-colors z-10"
+        style={{
+          color: companyBranding?.text_color || '#FFFFFF'
+        }}
       >
         <ArrowLeft className="h-6 w-6" />
         <span className="text-lg font-medium">Atrás</span>
@@ -163,7 +166,9 @@ const Processing = () => {
 
       <div className="flex-1 flex flex-col items-center justify-center">
         <div className="max-w-md w-full space-y-8 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold mb-8" style={{
+            color: companyBranding?.text_color || '#FFFFFF'
+          }}>
             Extrayendo información con IA…
           </h1>
 
@@ -184,7 +189,11 @@ const Processing = () => {
                 ) : (
                   <Circle className="h-6 w-6 text-gray-400" />
                 )}
-                <span className={`text-lg font-medium ${item.completed ? 'text-white' : 'text-gray-400'}`}>
+                <span className={`text-lg font-medium`} style={{
+                  color: item.completed 
+                    ? (companyBranding?.text_color || '#FFFFFF')
+                    : '#9CA3AF'
+                }}>
                   {item.label}
                 </span>
               </div>
