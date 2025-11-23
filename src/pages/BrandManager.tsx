@@ -126,7 +126,20 @@ const BrandManager = () => {
 
       if (updateError) throw updateError;
 
-      setBranding({ ...branding, logo_url: publicUrl });
+      // Refrescar la lista de companies para obtener los datos actualizados
+      const { data: refreshedCompanies } = await supabase
+        .from("company_branding")
+        .select("*")
+        .order("company_name");
+
+      if (refreshedCompanies) {
+        setCompanies(refreshedCompanies);
+        const updatedCompany = refreshedCompanies.find((c) => c.id === branding.id);
+        if (updatedCompany) {
+          setBranding(updatedCompany);
+        }
+      }
+
       toast({
         title: "Logo actualizado",
         description: "El logo se subió correctamente",
@@ -225,13 +238,14 @@ const BrandManager = () => {
 
             {branding && (
               <>
-                <div className="space-y-2">
+                 <div className="space-y-2">
                   <Label className="text-white">Logo actual</Label>
                   {branding.logo_url && (
                     <img
-                      src={branding.logo_url}
+                      src={`${branding.logo_url}?t=${Date.now()}`}
                       alt="Logo"
                       className="w-32 h-32 object-contain bg-white/20 rounded-lg p-2"
+                      key={branding.logo_url}
                     />
                   )}
                   <input
