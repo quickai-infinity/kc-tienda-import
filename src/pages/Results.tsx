@@ -138,23 +138,24 @@ const Results = () => {
 
       // Calculate savings: find which company is current and which is comparison
       // Current company name comes from the invoice
-      const currentCompanyName = extractedData.empresa;
+      const currentCompanyName = extractedData.empresa?.toUpperCase();
       
-      // Find the prices by matching company names
+      // Find the prices by matching company names (case-insensitive)
       let currentCompanyPrice = precioActual; // Default to invoice price
       let compareCompanyPrice = null;
       
       calculatedCompanies.forEach((company) => {
-        if (company.name === currentCompanyName) {
+        const normalizedCompanyName = company.name?.toUpperCase();
+        if (normalizedCompanyName === currentCompanyName) {
           // This is the current company - use invoice price preferentially
           currentCompanyPrice = precioActual || company.pricePerMonth;
-        } else {
-          // This is the comparison company
+        } else if (company.pricePerMonth !== null) {
+          // This is the comparison company and it has a valid price
           compareCompanyPrice = company.pricePerMonth;
         }
       });
 
-      console.log("Savings calculation v2:", { 
+      console.log("Savings calculation v3:", { 
         currentCompanyName,
         currentCompanyPrice, 
         compareCompanyPrice,
