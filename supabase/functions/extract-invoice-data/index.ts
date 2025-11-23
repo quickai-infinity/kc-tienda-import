@@ -38,9 +38,18 @@ serve(async (req) => {
 
     console.log("Processing file:", file.name, "Type:", file.type);
 
-    // Convert file to base64
+    // Convert file to base64 in chunks to avoid stack overflow
     const arrayBuffer = await file.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const bytes = new Uint8Array(arrayBuffer);
+    const chunkSize = 8192;
+    let binary = '';
+    
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+      binary += String.fromCharCode(...chunk);
+    }
+    
+    const base64 = btoa(binary);
     
     // Determine mime type
     let mimeType = file.type;
