@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Upload, Camera, Settings } from "lucide-react";
+import { Upload, Camera, Settings, Menu, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -12,6 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,6 +31,7 @@ const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [compareCompany, setCompareCompany] = useState<string>("");
   const [tariffType, setTariffType] = useState<"electricity" | "gas">("electricity");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -140,70 +148,178 @@ const Index = () => {
         }}
       />
 
-      {/* Top navigation - Respects safe area on notched devices */}
+      {/* Top navigation - Desktop: visible buttons, Mobile: hamburger menu */}
       <div 
         className="absolute right-4 flex items-center gap-4 z-10"
         style={{
           top: 'max(env(safe-area-inset-top, 0px) + 1.5rem, 1.5rem)'
         }}
       >
-        {!isAuthenticated ? (
-          <>
-            <button
-              onClick={() => navigate('/login')}
-              className="px-4 py-2 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg"
-              style={{
-                color: companyBranding?.text_color || '#FFFFFF'
-              }}
-            >
-              Iniciar sesión
-            </button>
-            <button
-              onClick={() => navigate('/register')}
-              className="px-4 py-2 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg"
-              style={{
-                color: companyBranding?.text_color || '#FFFFFF'
-              }}
-            >
-              Registrarse
-            </button>
-          </>
-        ) : (
-          <>
-            {isSuperAdmin && (
+        {/* Desktop Navigation - Hidden on mobile */}
+        <div className="hidden md:flex items-center gap-4">
+          {!isAuthenticated ? (
+            <>
               <button
-                onClick={() => navigate('/settings')}
-                className="transition-colors backdrop-blur-sm bg-black/20 rounded-lg p-2"
+                onClick={() => navigate('/login')}
+                className="px-4 py-2 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg hover:bg-black/30"
                 style={{
                   color: companyBranding?.text_color || '#FFFFFF'
                 }}
               >
-                <Settings className="h-6 w-6" />
+                Iniciar sesión
               </button>
-            )}
+              <button
+                onClick={() => navigate('/register')}
+                className="px-4 py-2 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg hover:bg-black/30"
+                style={{
+                  color: companyBranding?.text_color || '#FFFFFF'
+                }}
+              >
+                Registrarse
+              </button>
+            </>
+          ) : (
+            <>
+              {isSuperAdmin && (
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="transition-colors backdrop-blur-sm bg-black/20 rounded-lg p-2 hover:bg-black/30"
+                  style={{
+                    color: companyBranding?.text_color || '#FFFFFF'
+                  }}
+                >
+                  <Settings className="h-6 w-6" />
+                </button>
+              )}
+              <button
+                onClick={() => navigate('/admin/tariffs')}
+                className="px-3 py-1.5 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg hover:bg-black/30"
+                style={{
+                  color: companyBranding?.text_color || '#FFFFFF'
+                }}
+              >
+                Edición de tarifas
+              </button>
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate('/');
+                }}
+                className="px-3 py-1.5 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg hover:bg-black/30"
+                style={{
+                  color: companyBranding?.text_color || '#FFFFFF'
+                }}
+              >
+                Cerrar sesión
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Mobile Hamburger Menu - Visible only on mobile */}
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetTrigger asChild>
             <button
-              onClick={() => navigate('/admin/tariffs')}
-              className="px-3 py-1.5 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg"
+              className="md:hidden backdrop-blur-sm bg-black/20 rounded-lg p-2 hover:bg-black/30 transition-colors"
               style={{
                 color: companyBranding?.text_color || '#FFFFFF'
               }}
             >
-              Edición de tarifas
+              <Menu className="h-6 w-6" />
             </button>
-            <button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                navigate('/');
-              }}
-              className="px-3 py-1.5 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg"
-              style={{
-                color: companyBranding?.text_color || '#FFFFFF'
-              }}
-            >
-              Cerrar sesión
-            </button>
-          </>
-        )}
+          </SheetTrigger>
+          <SheetContent 
+            side="right" 
+            className="w-[280px] sm:w-[350px]"
+            style={{ 
+              background: companyBranding?.background_color || '#003942',
+              borderLeft: '1px solid rgba(255, 255, 255, 0.1)'
+            }}
+          >
+            <SheetHeader>
+              <SheetTitle 
+                className="text-left"
+                style={{ color: companyBranding?.text_color || '#FFFFFF' }}
+              >
+                Menú
+              </SheetTitle>
+            </SheetHeader>
+            
+            <div className="flex flex-col gap-4 mt-8">
+              {!isAuthenticated ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate('/login');
+                    }}
+                    className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20"
+                    style={{
+                      color: companyBranding?.text_color || '#FFFFFF'
+                    }}
+                  >
+                    Iniciar sesión
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate('/register');
+                    }}
+                    className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20"
+                    style={{
+                      color: companyBranding?.text_color || '#FFFFFF'
+                    }}
+                  >
+                    Registrarse
+                  </button>
+                </>
+              ) : (
+                <>
+                  {isSuperAdmin && (
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        navigate('/settings');
+                      }}
+                      className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20 flex items-center gap-3"
+                      style={{
+                        color: companyBranding?.text_color || '#FFFFFF'
+                      }}
+                    >
+                      <Settings className="h-5 w-5" />
+                      Configuración
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate('/admin/tariffs');
+                    }}
+                    className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20"
+                    style={{
+                      color: companyBranding?.text_color || '#FFFFFF'
+                    }}
+                  >
+                    Edición de tarifas
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setMobileMenuOpen(false);
+                      await supabase.auth.signOut();
+                      navigate('/');
+                    }}
+                    className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20"
+                    style={{
+                      color: companyBranding?.text_color || '#FFFFFF'
+                    }}
+                  >
+                    Cerrar sesión
+                  </button>
+                </>
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center" style={{
