@@ -150,19 +150,19 @@ const Index = () => {
         </button>
       )}
 
-      {/* Logo in header - prioritize company branding logo */}
-      {(companyBranding?.logo_url || branding?.logo_url) && (
-        <div className="absolute top-6 left-4 z-10">
-          <img 
-            src={companyBranding?.logo_url || branding?.logo_url || ""} 
-            alt={companyBranding?.company_name || branding?.app_name || "Logo"} 
-            className="h-10 w-auto object-contain"
-          />
-        </div>
-      )}
-
       <div className="flex-1 flex flex-col items-center justify-center">
         <div className="max-w-md w-full space-y-8 text-center">
+          {/* Logo centrado arriba del título */}
+          {(companyBranding?.logo_url || branding?.logo_url) && (
+            <div className="flex justify-center mb-8">
+              <img 
+                src={companyBranding?.logo_url || branding?.logo_url || ""} 
+                alt={companyBranding?.company_name || branding?.app_name || "Logo"} 
+                className="w-32 h-auto object-contain"
+              />
+            </div>
+          )}
+
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-12">
             Subir factura para comparar
           </h1>
