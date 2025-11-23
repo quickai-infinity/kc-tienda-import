@@ -367,7 +367,7 @@ const Results = () => {
                 <div className="text-xl font-bold" style={{
                   color: companyBranding?.text_color || '#FFFFFF'
                 }}>
-                  {company.hasTariff && company.pricePerMonth !== null 
+                  {company.pricePerMonth !== null 
                     ? `${formatCurrency(company.pricePerMonth)} €/mes`
                     : <span className="text-sm text-white/60">Sin datos de tarifa</span>
                   }
