@@ -22,7 +22,6 @@ const Index = () => {
   const { branding, companyBranding } = useBranding();
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentCompany, setCurrentCompany] = useState<string>("");
   const [compareCompany, setCompareCompany] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +89,8 @@ const Index = () => {
     }
 
     // Navigate to processing with the file
+    // Use active company from branding as currentCompany
+    const currentCompany = companyBranding?.company_name || branding?.active_company || "";
     navigate('/processing', { state: { file, currentCompany, compareCompany } });
   };
 
@@ -218,32 +219,19 @@ const Index = () => {
             Subir factura para comparar
           </h1>
 
-          {/* Dropdown Selectors */}
-          <div className="space-y-4 mb-8">
-            <div className="space-y-2">
-              <label className="text-sm font-medium block text-left" style={{
+          {/* Show active company name */}
+          {(companyBranding?.company_name || branding?.active_company) && (
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold" style={{
                 color: companyBranding?.text_color || '#FFFFFF'
               }}>
-                Empresa actual
-              </label>
-              <Select value={currentCompany} onValueChange={setCurrentCompany}>
-                <SelectTrigger className="w-full h-14 bg-[#00404A] text-white border-none rounded-2xl shadow-lg text-lg">
-                  <SelectValue placeholder="Selecciona tu empresa" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#00404A] border-none rounded-2xl">
-                  {companies.map((company) => (
-                    <SelectItem
-                      key={company}
-                      value={company}
-                      className="text-white text-lg focus:bg-[#003942] focus:text-white"
-                    >
-                      {company}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {companyBranding?.company_name || branding?.active_company}
+              </h2>
             </div>
+          )}
 
+          {/* Compare with selector */}
+          <div className="space-y-4 mb-8">
             <div className="space-y-2">
               <label className="text-sm font-medium block text-left" style={{
                 color: companyBranding?.text_color || '#FFFFFF'
