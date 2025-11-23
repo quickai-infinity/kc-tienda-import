@@ -35,6 +35,7 @@ const Index = () => {
     "TotalEnergies",
     "Lucera",
     "Holaluz",
+    "Orange",
   ];
 
   useEffect(() => {
@@ -253,6 +254,7 @@ const Index = () => {
               <div className="text-white text-sm font-semibold">TotalEnergies</div>
               <div className="text-white text-sm font-semibold">Lucera</div>
               <div className="text-white text-sm font-semibold">Holaluz</div>
+              <div className="text-white text-sm font-semibold">Orange</div>
             </div>
           </div>
         </div>
