@@ -41,10 +41,13 @@ const Results = () => {
   
   const extractedData = location.state?.extractedData || {};
   // Get from localStorage as fallback for PWA on Android (state can be lost)
-  const currentCompany = location.state?.currentCompany || localStorage.getItem('selectedCompany') || extractedData.empresa || "";
+  // PRIORIDAD: empresa seleccionada en dropdown > empresa extraída por OCR
+  const selectedCompany = localStorage.getItem('selectedCompany') || "";
+  const currentCompany = selectedCompany || extractedData.empresa || "";
   const tariffType = (location.state?.tariffType || localStorage.getItem('tariffType') || "electricity") as "electricity" | "gas";
   
   console.log('Results page - Received:', { 
+    selectedCompany,
     currentCompany, 
     tariffType,
     extractedEmpresa: extractedData.empresa 
@@ -74,37 +77,31 @@ const Results = () => {
         return;
       }
 
-      // Cargar dos empresas: la de la factura (OCR) y la seleccionada en dropdown
-      const facturaCompany = extractedData.empresa || "";
-      const selectedCompany = localStorage.getItem('selectedCompany') || "";
+      // Empresa mostrada: la seleccionada por el usuario o la del OCR
+      const displayCompany = currentCompany;
       
-      console.log('Loading companies:', { facturaCompany, selectedCompany, precioActual, consumoKwh });
+      console.log('Loading tariff for:', { displayCompany, precioActual, consumoKwh });
       
-      // Crear lista de empresas únicas (evitar duplicados)
-      const companiesToLoad = Array.from(new Set([facturaCompany, selectedCompany].filter(Boolean)));
       const calculatedCompanies: CompanyOption[] = [];
 
-      for (const companyName of companiesToLoad) {
-        // Get empresa (case-insensitive search)
-        const { data: empresa } = await supabase
-          .from("empresas")
-          .select("id")
-          .ilike("nombre", companyName)
-          .single();
+      // Buscar la empresa en la base de datos (case-insensitive)
+      const { data: empresa } = await supabase
+        .from("empresas")
+        .select("id")
+        .ilike("nombre", displayCompany)
+        .single();
 
-        console.log(`Company ${companyName}:`, empresa);
+      console.log(`Company ${displayCompany}:`, empresa);
 
-        if (!empresa) {
-          // Si es la empresa de la factura, usar precio del OCR
-          calculatedCompanies.push({
-            id: companyName || "",
-            name: companyName || "",
-            pricePerMonth: facturaCompany.toUpperCase() === companyName.toUpperCase() ? precioActual : null,
-            hasTariff: false,
-          });
-          continue;
-        }
-
+      if (!empresa) {
+        // Si no está en BD, usar precio del OCR si disponible
+        calculatedCompanies.push({
+          id: displayCompany || "",
+          name: displayCompany || "",
+          pricePerMonth: precioActual,
+          hasTariff: false,
+        });
+      } else {
         // Get tariff based on tariff type
         let calculatedPrice: number | null = null;
 
@@ -115,21 +112,25 @@ const Results = () => {
             .eq("empresa_id", empresa.id)
             .single();
 
-          console.log(`Tarifa electricidad for ${companyName}:`, tarifaElec);
+          console.log(`Tarifa electricidad for ${displayCompany}:`, tarifaElec);
 
           if (!tarifaElec) {
-            // Si es la empresa de la factura, usar precio del OCR
-            const isFacturaCompany = facturaCompany.toUpperCase() === companyName.toUpperCase();
+            // Sin tarifa configurada, usar precio del OCR
             calculatedCompanies.push({
               id: empresa.id,
-              name: companyName || "",
-              pricePerMonth: isFacturaCompany ? precioActual : null,
+              name: displayCompany || "",
+              pricePerMonth: precioActual,
               hasTariff: false,
             });
-            continue;
+          } else {
+            calculatedPrice = calculateMonthlyElectricityPrice(consumoKwh, tarifaElec);
+            calculatedCompanies.push({
+              id: empresa.id,
+              name: displayCompany || "",
+              pricePerMonth: calculatedPrice,
+              hasTariff: true,
+            });
           }
-
-          calculatedPrice = calculateMonthlyElectricityPrice(consumoKwh, tarifaElec);
         } else {
           const { data: tarifaGas } = await supabase
             .from("tarifas_gas")
@@ -138,65 +139,32 @@ const Results = () => {
             .single();
 
           if (!tarifaGas) {
-            // Si es la empresa de la factura, usar precio del OCR
-            const isFacturaCompany = facturaCompany.toUpperCase() === companyName.toUpperCase();
+            // Sin tarifa configurada, usar precio del OCR
             calculatedCompanies.push({
               id: empresa.id,
-              name: companyName || "",
-              pricePerMonth: isFacturaCompany ? precioActual : null,
+              name: displayCompany || "",
+              pricePerMonth: precioActual,
               hasTariff: false,
             });
-            continue;
+          } else {
+            calculatedPrice = calculateMonthlyGasPrice(consumoKwh, tarifaGas);
+            calculatedCompanies.push({
+              id: empresa.id,
+              name: displayCompany || "",
+              pricePerMonth: calculatedPrice,
+              hasTariff: true,
+            });
           }
-
-          calculatedPrice = calculateMonthlyGasPrice(consumoKwh, tarifaGas);
         }
-
-        calculatedCompanies.push({
-          id: empresa.id,
-          name: companyName || "",
-          pricePerMonth: calculatedPrice,
-          hasTariff: true,
-        });
       }
 
       console.log('Calculated companies:', calculatedCompanies);
 
       setCompanies(calculatedCompanies);
 
-      // Calcular ahorros: empresa de factura vs empresa seleccionada
-      const facturaCompanyData = calculatedCompanies.find(c => 
-        c.name.toUpperCase() === facturaCompany.toUpperCase()
-      );
-      const selectedCompanyData = calculatedCompanies.find(c => 
-        c.name.toUpperCase() === selectedCompany.toUpperCase()
-      );
-      
-      console.log('Price data:', { 
-        facturaCompanyData, 
-        selectedCompanyData,
-        facturaPrice: facturaCompanyData?.pricePerMonth || precioActual,
-        selectedPrice: selectedCompanyData?.pricePerMonth
-      });
-      
-      const facturaPrice = facturaCompanyData?.pricePerMonth || precioActual;
-      const selectedPrice = selectedCompanyData?.pricePerMonth;
-
-      if (facturaPrice && selectedPrice && facturaCompany.toUpperCase() !== selectedCompany.toUpperCase()) {
-        const monthlyDiff = facturaPrice - selectedPrice;
-        console.log('Monthly difference:', monthlyDiff);
-        // Solo mostrar ahorros positivos (cuando cambiar sería más barato)
-        if (monthlyDiff > 0) {
-          setSavingsPerMonth(formatCurrency(monthlyDiff));
-          setSavingsPerYear(formatCurrency(monthlyDiff * 12));
-        } else {
-          setSavingsPerMonth("0,00");
-          setSavingsPerYear("0,00");
-        }
-      } else {
-        setSavingsPerMonth("0,00");
-        setSavingsPerYear("0,00");
-      }
+      // NO HAY AHORRO porque solo mostramos UNA empresa
+      setSavingsPerMonth("0,00");
+      setSavingsPerYear("0,00");
 
       setLoading(false);
     };
@@ -260,15 +228,7 @@ const Results = () => {
       doc.text("Datos de tu factura", 20, 70);
       
       doc.setFontSize(11);
-      const facturaCompany = extractedData.empresa || "";
-      const selectedCompany = localStorage.getItem('selectedCompany') || "";
-      doc.text(`Empresa de tu factura: ${facturaCompany || 'N/A'}`, 20, 80);
-      if (selectedCompany && selectedCompany !== facturaCompany) {
-        doc.text(`Comparando con: ${selectedCompany}`, 20, 88);
-        doc.text(`Tarifa actual: ${extractedData.tarifa || 'N/A'}`, 20, 96);
-      } else {
-        doc.text(`Tarifa actual: ${extractedData.tarifa || 'N/A'}`, 20, 88);
-      }
+      doc.text(`Empresa de tu factura: ${currentCompany || 'N/A'}`, 20, 80);
       doc.text(`Tarifa actual: ${extractedData.tarifa || 'N/A'}`, 20, 96);
       doc.text(`Consumo mensual: ${extractedData.consumo_kwh || 'N/A'} kWh`, 20, 104);
       doc.text(`Precio mensual estimado: ${extractedData.precio_mensual || 'N/A'} €`, 20, 112);
@@ -363,14 +323,8 @@ const Results = () => {
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Empresa de tu factura:</span>
-              <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.empresa || 'N/A'}</span>
+              <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{currentCompany || 'N/A'}</span>
             </div>
-            {localStorage.getItem('selectedCompany') && localStorage.getItem('selectedCompany') !== extractedData.empresa && (
-              <div className="flex justify-between items-center">
-                <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Comparando con:</span>
-                <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{localStorage.getItem('selectedCompany') || 'N/A'}</span>
-              </div>
-            )}
             <div className="flex justify-between items-center">
               <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Tarifa actual:</span>
               <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.tarifa || 'N/A'}</span>
