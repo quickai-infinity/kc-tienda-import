@@ -8,6 +8,20 @@ import { Eye, EyeOff } from "lucide-react";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { useBranding } from "@/contexts/BrandingContext";
+import { z } from "zod";
+
+const loginSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email({ message: "Correo electrónico inválido" })
+    .max(255, { message: "El correo es demasiado largo" })
+    .toLowerCase(),
+  password: z
+    .string()
+    .min(1, { message: "La contraseña es requerida" })
+    .max(128, { message: "La contraseña es demasiado larga" }),
+});
 
 const Login = () => {
   const navigate = useNavigate();
@@ -30,12 +44,29 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate input with zod
+    const result = loginSchema.safeParse({
+      email: email.trim(),
+      password,
+    });
+
+    if (!result.success) {
+      const firstError = result.error.errors[0];
+      toast({
+        title: "Error de validación",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: result.data.email,
+        password: result.data.password,
       });
 
       if (error) throw error;

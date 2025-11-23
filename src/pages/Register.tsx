@@ -7,6 +7,27 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+
+const registerSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email({ message: "Correo electrónico inválido" })
+    .max(255, { message: "El correo es demasiado largo" })
+    .toLowerCase(),
+  password: z
+    .string()
+    .min(8, { message: "La contraseña debe tener al menos 8 caracteres" })
+    .max(128, { message: "La contraseña es demasiado larga" })
+    .regex(/[a-z]/, { message: "Debe contener al menos una letra minúscula" })
+    .regex(/[A-Z]/, { message: "Debe contener al menos una letra mayúscula" })
+    .regex(/[0-9]/, { message: "Debe contener al menos un número" }),
+  repeatPassword: z.string(),
+}).refine((data) => data.password === data.repeatPassword, {
+  message: "Las contraseñas no coinciden",
+  path: ["repeatPassword"],
+});
 
 const Register = () => {
   const navigate = useNavigate();
@@ -21,19 +42,18 @@ const Register = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password !== repeatPassword) {
-      toast({
-        title: "Error",
-        description: "Las contraseñas no coinciden",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Validate input with zod
+    const result = registerSchema.safeParse({
+      email: email.trim(),
+      password,
+      repeatPassword,
+    });
 
-    if (password.length < 6) {
+    if (!result.success) {
+      const firstError = result.error.errors[0];
       toast({
-        title: "Error",
-        description: "La contraseña debe tener al menos 6 caracteres",
+        title: "Error de validación",
+        description: firstError.message,
         variant: "destructive",
       });
       return;
@@ -43,8 +63,11 @@ const Register = () => {
 
     try {
       const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: result.data.email,
+        password: result.data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
       });
 
       if (error) throw error;
@@ -129,6 +152,9 @@ const Register = () => {
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
+                <p className="text-white/60 text-xs mt-1">
+                  Mínimo 8 caracteres, incluye mayúscula, minúscula y número
+                </p>
               </div>
 
               <div className="space-y-2">
