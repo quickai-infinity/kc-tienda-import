@@ -107,17 +107,29 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] relative">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] relative"
+      style={{
+        paddingTop: 'max(env(safe-area-inset-top, 0px), 0px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0px)'
+      }}
+    >
       {/* Back Button */}
       <button
         onClick={() => navigate('/login')}
-        className="absolute top-6 left-4 flex items-center gap-2 text-white hover:text-white/80 transition-colors z-10"
+        className="absolute left-4 flex items-center gap-2 text-white hover:text-white/80 transition-colors z-10"
+        style={{
+          top: 'max(calc(env(safe-area-inset-top, 0px) + 1.5rem), 1.5rem)'
+        }}
       >
         <ArrowLeft className="h-6 w-6" />
         <span className="text-lg font-medium">Atrás</span>
       </button>
 
-      <div className="flex-1 flex items-center justify-center px-4">
+      <div className="flex-1 flex items-center justify-center px-4"
+        style={{
+          paddingTop: 'max(calc(env(safe-area-inset-top, 0px) + 4rem), 4rem)'
+        }}
+      >
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
