@@ -66,12 +66,12 @@ const Results = () => {
   const [savingsPerYear, setSavingsPerYear] = useState<string>("0,00");
   const [loading, setLoading] = useState(true);
 
+  const consumoKwh = parseFloat(extractedData.consumo_kwh) || 0;
+  const precioActual = parseFloat(extractedData.precio_mensual) || null;
+
   // Load tariffs and calculate prices
   useEffect(() => {
     const loadTariffsAndCalculate = async () => {
-      const consumoKwh = parseFloat(extractedData.consumo_kwh) || 0;
-      const precioActual = parseFloat(extractedData.precio_mensual) || null;
-
       if (!consumoKwh) {
         setLoading(false);
         return;
@@ -187,7 +187,7 @@ const Results = () => {
     };
 
     loadTariffsAndCalculate();
-  }, [extractedData, currentCompany, tariffType]);
+  }, [consumoKwh, precioActual, currentCompany, tariffType]);
 
   const handleDownloadPDF = async () => {
     try {
