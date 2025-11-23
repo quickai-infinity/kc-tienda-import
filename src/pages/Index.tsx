@@ -29,6 +29,7 @@ const Index = () => {
   const { branding, companyBranding } = useBranding();
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userApproved, setUserApproved] = useState<boolean | null>(null);
   const [compareCompany, setCompareCompany] = useState<string>("");
   const [tariffType, setTariffType] = useState<"electricity" | "gas">("electricity");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -47,16 +48,41 @@ const Index = () => {
   ];
 
   useEffect(() => {
+    const checkUserApproval = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("approved")
+          .eq("user_id", user.id)
+          .single();
+        
+        setUserApproved(profile?.approved || false);
+        
+        if (profile && !profile.approved) {
+          navigate("/pending-approval");
+        }
+      } else {
+        setUserApproved(null);
+      }
+    };
+
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
+      await checkUserApproval();
       setLoading(false);
     };
     
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setIsAuthenticated(!!session);
+      if (session?.user) {
+        await checkUserApproval();
+      } else {
+        setUserApproved(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -264,15 +290,26 @@ const Index = () => {
           ) : (
             <>
               {isSuperAdmin && (
-                <button
-                  onClick={() => navigate('/settings')}
-                  className="transition-colors backdrop-blur-sm bg-black/20 rounded-lg p-2 hover:bg-black/30"
-                  style={{
-                    color: companyBranding?.text_color || '#FFFFFF'
-                  }}
-                >
-                  <Settings className="h-6 w-6" />
-                </button>
+                <>
+                  <button
+                    onClick={() => navigate('/settings')}
+                    className="transition-colors backdrop-blur-sm bg-black/20 rounded-lg p-2 hover:bg-black/30"
+                    style={{
+                      color: companyBranding?.text_color || '#FFFFFF'
+                    }}
+                  >
+                    <Settings className="h-6 w-6" />
+                  </button>
+                  <button
+                    onClick={() => navigate('/admin/users')}
+                    className="px-3 py-1.5 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg hover:bg-black/30"
+                    style={{
+                      color: companyBranding?.text_color || '#FFFFFF'
+                    }}
+                  >
+                    Gestión de usuarios
+                  </button>
+                </>
               )}
               <button
                 onClick={() => navigate('/admin/tariffs')}
@@ -359,19 +396,33 @@ const Index = () => {
               ) : (
                 <>
                   {isSuperAdmin && (
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        navigate('/settings');
-                      }}
-                      className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20 flex items-center gap-3"
-                      style={{
-                        color: companyBranding?.text_color || '#FFFFFF'
-                      }}
-                    >
-                      <Settings className="h-5 w-5" />
-                      Configuración
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          navigate('/settings');
+                        }}
+                        className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20 flex items-center gap-3"
+                        style={{
+                          color: companyBranding?.text_color || '#FFFFFF'
+                        }}
+                      >
+                        <Settings className="h-5 w-5" />
+                        Configuración
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          navigate('/admin/users');
+                        }}
+                        className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20"
+                        style={{
+                          color: companyBranding?.text_color || '#FFFFFF'
+                        }}
+                      >
+                        Gestión de usuarios
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => {
