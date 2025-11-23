@@ -39,9 +39,6 @@ const Index = () => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
-      if (!session) {
-        navigate('/login');
-      }
       setLoading(false);
     };
     
@@ -49,9 +46,6 @@ const Index = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session);
-      if (!session) {
-        navigate('/login');
-      }
     });
 
     return () => subscription.unsubscribe();
@@ -59,6 +53,17 @@ const Index = () => {
 
   const handleFileSelect = async (file: File) => {
     if (!file) return;
+
+    // Check if user is authenticated before processing
+    if (!isAuthenticated) {
+      toast({
+        title: "Autenticación requerida",
+        description: "Debes iniciar sesión para subir facturas",
+        variant: "destructive",
+      });
+      navigate('/login');
+      return;
+    }
 
     // Validate file type
     const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/heic'];
