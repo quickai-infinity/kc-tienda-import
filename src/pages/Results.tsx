@@ -381,43 +381,6 @@ const Results = () => {
           </div>
         </div>
 
-        {/* Company Comparison Cards */}
-        <div className="space-y-3 mt-12">
-          {loading ? (
-            <div className="text-center text-white">Calculando precios...</div>
-          ) : companies.length > 0 ? (
-            companies.map((company) => (
-              <div
-                key={company.id}
-                className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 flex items-center justify-between transition-all duration-300 hover:bg-white/15 shadow-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-lg font-semibold" style={{
-                    color: companyBranding?.text_color || '#FFFFFF'
-                  }}>
-                    {company.name}
-                  </span>
-                </div>
-                
-                <div className="text-xl font-bold" style={{
-                  color: companyBranding?.text_color || '#FFFFFF'
-                }}>
-                  {company.pricePerMonth !== null 
-                    ? `${formatCurrency(company.pricePerMonth)} €/mes`
-                    : <span className="text-sm text-white/60">Sin datos de tarifa</span>
-                  }
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center" style={{
-              color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)'
-            }}>
-              No se seleccionaron empresas para comparar
-            </div>
-          )}
-        </div>
-
         {/* Additional Info */}
         <div className="text-center text-sm mt-8" style={{
           color: companyBranding?.text_color ? `${companyBranding.text_color}99` : 'rgba(255, 255, 255, 0.6)'
