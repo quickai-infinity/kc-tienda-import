@@ -30,11 +30,13 @@ const Dashboard = () => {
         return;
       }
 
-      // Fetch user's facturas
+      // Fetch user's facturas where empresa_destino is different from empresa_actual
       const { data: facturas, error } = await supabase
         .from('facturas')
         .select('*')
         .eq('user_id', session.user.id)
+        .not('empresa_destino', 'is', null)
+        .neq('empresa_destino', '')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -48,16 +50,27 @@ const Dashboard = () => {
         return;
       }
 
+      console.log("Facturas loaded:", facturas);
+
       // Process each factura to calculate savings
       const comparativasData: ComparativaCard[] = [];
 
       for (const factura of facturas) {
-        if (!factura.empresa_destino) continue;
+        // Skip if empresa_destino is same as empresa_actual
+        if (factura.empresa_destino === factura.empresa_actual) {
+          console.log("Skipping factura with same empresa:", factura.id);
+          continue;
+        }
 
         const consumoKwh = parseFloat(factura.consumo_kwh.toString());
         const precioActual = factura.precio_mensual_estimado 
           ? parseFloat(factura.precio_mensual_estimado.toString()) 
           : null;
+
+        if (!precioActual) {
+          console.log("No precio actual for factura:", factura.id);
+          continue;
+        }
 
         // Get empresa_destino details
         const { data: empresaDestino } = await supabase
@@ -66,7 +79,10 @@ const Dashboard = () => {
           .eq("nombre", factura.empresa_destino)
           .single();
 
-        if (!empresaDestino) continue;
+        if (!empresaDestino) {
+          console.log("Empresa not found:", factura.empresa_destino);
+          continue;
+        }
 
         // Calculate price for empresa_destino
         // Try electricity tariff first
@@ -93,23 +109,31 @@ const Dashboard = () => {
           }
         }
 
+        console.log("Prices:", {
+          factura_id: factura.id,
+          empresa_actual: factura.empresa_actual,
+          empresa_destino: factura.empresa_destino,
+          precioActual,
+          precioDestino
+        });
+
         // Calculate savings if we have both prices
-        if (precioActual && precioDestino) {
+        if (precioDestino) {
           const ahorroMensual = precioActual - precioDestino;
           const ahorroAnual = ahorroMensual * 12;
 
-          if (ahorroMensual > 0) {
-            comparativasData.push({
-              id: factura.id,
-              empresaDestino: factura.empresa_destino,
-              ahorroMensual: formatCurrency(ahorroMensual),
-              ahorroAnual: formatCurrency(ahorroAnual),
-              fecha: new Date(factura.created_at).toLocaleDateString('es-ES'),
-            });
-          }
+          // Show savings even if negative (more expensive)
+          comparativasData.push({
+            id: factura.id,
+            empresaDestino: factura.empresa_destino,
+            ahorroMensual: formatCurrency(Math.abs(ahorroMensual)),
+            ahorroAnual: formatCurrency(Math.abs(ahorroAnual)),
+            fecha: new Date(factura.created_at).toLocaleDateString('es-ES'),
+          });
         }
       }
 
+      console.log("Comparativas data:", comparativasData);
       setComparativas(comparativasData);
       setLoading(false);
     };
