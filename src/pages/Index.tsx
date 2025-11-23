@@ -109,7 +109,11 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] px-4 relative">
+    <div className="min-h-screen flex flex-col px-4 relative" style={{ 
+      background: companyBranding?.background_color 
+        ? `linear-gradient(to bottom, ${companyBranding.background_color}, ${companyBranding.background_color})`
+        : 'linear-gradient(to bottom, #003942, #002F36)'
+    }}>
       {/* Hidden file inputs */}
       <input
         ref={fileInputRef}

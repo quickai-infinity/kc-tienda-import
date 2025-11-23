@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { CheckCircle2, Circle, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useBranding } from "@/contexts/BrandingContext";
 import Footer from "@/components/Footer";
 
 interface ProcessingItem {
@@ -24,6 +25,7 @@ const Processing = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { companyBranding } = useBranding();
   const [items, setItems] = useState<ProcessingItem[]>([
     { id: "consumo", label: "Consumo mensual", completed: false },
     { id: "tarifa", label: "Tarifa actual", completed: false },
@@ -145,7 +147,11 @@ const Processing = () => {
   }, [navigate, location.state, toast]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] px-4 py-6 relative">
+    <div className="min-h-screen flex flex-col px-4 py-6 relative" style={{ 
+      background: companyBranding?.background_color 
+        ? `linear-gradient(to bottom, ${companyBranding.background_color}, ${companyBranding.background_color})`
+        : 'linear-gradient(to bottom, #003942, #002F36)'
+    }}>
       {/* Back Button */}
       <button
         onClick={() => navigate('/')}

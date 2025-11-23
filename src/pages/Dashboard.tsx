@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { useBranding } from "@/contexts/BrandingContext";
 import { useEffect } from "react";
 import Footer from "@/components/Footer";
 
@@ -13,6 +14,7 @@ interface ClientCard {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { companyBranding } = useBranding();
 
   // Check authentication
   useEffect(() => {
@@ -32,7 +34,11 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] relative">
+    <div className="min-h-screen flex flex-col relative" style={{ 
+      background: companyBranding?.background_color 
+        ? `linear-gradient(to bottom, ${companyBranding.background_color}, ${companyBranding.background_color})`
+        : 'linear-gradient(to bottom, #003942, #002F36)'
+    }}>
       {/* Back Button */}
       <button
         onClick={() => navigate('/')}
