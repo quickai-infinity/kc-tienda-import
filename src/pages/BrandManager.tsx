@@ -99,26 +99,35 @@ const BrandManager = () => {
     setUploading(true);
 
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${branding.company_name.toLowerCase()}-${Date.now()}.${fileExt}`;
-
+      // Delete old logo if exists
       if (branding.logo_url) {
-        const oldPath = branding.logo_url.split("/").pop();
-        if (oldPath) {
-          await supabase.storage.from("company-logos").remove([oldPath]);
+        const oldFileName = branding.logo_url.split("/").pop();
+        if (oldFileName) {
+          await supabase.storage
+            .from("company-logos")
+            .remove([oldFileName]);
         }
       }
 
+      // Upload new logo with unique timestamp
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${branding.company_name.toLowerCase()}-${Date.now()}.${fileExt}`;
+
       const { error: uploadError } = await supabase.storage
         .from("company-logos")
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
 
       if (uploadError) throw uploadError;
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("company-logos").getPublicUrl(fileName);
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("company-logos")
+        .getPublicUrl(fileName);
 
+      // Update database
       const { error: updateError } = await supabase
         .from("company_branding")
         .update({ logo_url: publicUrl })
@@ -126,7 +135,7 @@ const BrandManager = () => {
 
       if (updateError) throw updateError;
 
-      // Refrescar la lista de companies para obtener los datos actualizados
+      // Force refresh of company list from database
       const { data: refreshedCompanies } = await supabase
         .from("company_branding")
         .select("*")
@@ -134,24 +143,34 @@ const BrandManager = () => {
 
       if (refreshedCompanies) {
         setCompanies(refreshedCompanies);
-        const updatedCompany = refreshedCompanies.find((c) => c.id === branding.id);
-        if (updatedCompany) {
-          setBranding(updatedCompany);
+        // Update current branding with fresh data
+        const updatedBranding = refreshedCompanies.find(c => c.id === branding.id);
+        if (updatedBranding) {
+          setBranding(updatedBranding);
         }
       }
 
       toast({
         title: "Logo actualizado",
-        description: "El logo se subió correctamente",
+        description: "El logo se ha subido correctamente",
       });
+
+      // Force page reload to clear all caches
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Error al subir el logo",
+        description: error.message || "No se pudo subir el logo",
         variant: "destructive",
       });
     } finally {
       setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
