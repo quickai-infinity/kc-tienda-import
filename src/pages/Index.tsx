@@ -87,31 +87,34 @@ const Index = () => {
       return;
     }
 
-    // Validate file size (max 10MB for camera photos, 20MB for PDFs)
-    const maxSize = file.type.startsWith('image/') ? 10 * 1024 * 1024 : 20 * 1024 * 1024;
+    // Validate file size (max 6MB for camera photos, 10MB for PDFs)
+    const maxSize = file.type.startsWith('image/') ? 6 * 1024 * 1024 : 10 * 1024 * 1024;
     if (file.size > maxSize) {
       toast({
         title: "Archivo muy grande",
         description: file.type.startsWith('image/') 
-          ? "La foto no debe superar los 10MB" 
-          : "El archivo no debe superar los 20MB",
+          ? "La foto no debe superar los 6MB" 
+          : "El archivo no debe superar los 10MB",
         variant: "destructive",
       });
       return;
     }
 
-    // Compress image if needed (especially for Android camera photos)
+    // ALWAYS compress images for Android memory optimization
     let processedFile = file;
-    if (file.type.startsWith('image/') && file.size > 2 * 1024 * 1024) {
+    if (file.type.startsWith('image/')) {
       try {
+        console.log('Original image size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
         processedFile = await compressImage(file);
-        console.log('Image compressed:', { 
-          originalSize: file.size, 
-          compressedSize: processedFile.size 
-        });
+        console.log('Compressed image size:', (processedFile.size / 1024 / 1024).toFixed(2), 'MB');
       } catch (error) {
         console.error('Error compressing image:', error);
-        // Continue with original file if compression fails
+        toast({
+          title: "Error al comprimir imagen",
+          description: "No se pudo optimizar la imagen. Intenta con otra foto.",
+          variant: "destructive",
+        });
+        return;
       }
     }
 
@@ -126,7 +129,7 @@ const Index = () => {
     navigate('/processing', { state: { file: processedFile, selectedCompany: compareCompany, tariffType } });
   };
 
-  // Helper function to compress images
+  // Helper function to compress images aggressively for mobile
   const compressImage = (file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -141,8 +144,8 @@ const Index = () => {
           let width = img.width;
           let height = img.height;
           
-          // Resize if too large (max 1920px)
-          const maxSize = 1920;
+          // Resize to smaller size for mobile memory optimization (max 1280px)
+          const maxSize = 1280;
           if (width > maxSize || height > maxSize) {
             if (width > height) {
               height = (height / width) * maxSize;
@@ -172,7 +175,7 @@ const Index = () => {
               }
             },
             'image/jpeg',
-            0.85 // Quality (85%)
+            0.70 // Lower quality for better memory usage (70%)
           );
         };
         
