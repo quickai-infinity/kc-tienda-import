@@ -92,10 +92,12 @@ const Results = () => {
             .single();
 
           if (!tarifaElec) {
+            // If this is the current company (from invoice), use invoice price
+            const isCurrentCompany = companyName === extractedData.empresa;
             calculatedCompanies.push({
               id: empresa.id,
               name: companyName || "",
-              pricePerMonth: null,
+              pricePerMonth: isCurrentCompany ? precioActual : null,
               hasTariff: false,
             });
             continue;
@@ -110,10 +112,12 @@ const Results = () => {
             .single();
 
           if (!tarifaGas) {
+            // If this is the current company (from invoice), use invoice price
+            const isCurrentCompany = companyName === extractedData.empresa;
             calculatedCompanies.push({
               id: empresa.id,
               name: companyName || "",
-              pricePerMonth: null,
+              pricePerMonth: isCurrentCompany ? precioActual : null,
               hasTariff: false,
             });
             continue;
