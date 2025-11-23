@@ -85,13 +85,6 @@ const AdminTariffs = () => {
     }
   }, [isSuperAdmin, isCompanyAdmin, roleLoading, navigate]);
 
-  // Auto-select company for company_admin
-  useEffect(() => {
-    if (isCompanyAdmin && companyId && !selectedEmpresaId) {
-      setSelectedEmpresaId(companyId);
-    }
-  }, [isCompanyAdmin, companyId, selectedEmpresaId]);
-
   // Load empresas
   useEffect(() => {
     loadEmpresas();
@@ -308,27 +301,27 @@ const AdminTariffs = () => {
       <div className="max-w-4xl mx-auto space-y-8 pt-16">
         <h1 className="text-3xl font-bold text-white text-center">Administración de Tarifas</h1>
 
-        {/* Company Selector - Only for superadmin */}
-        {isSuperAdmin && (
-          <Card className="bg-white/10 backdrop-blur-sm border-white/20">
-            <CardHeader>
-              <CardTitle className="text-white">Seleccionar Empresa</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Select value={selectedEmpresaId} onValueChange={setSelectedEmpresaId}>
-                <SelectTrigger className="bg-[#00404A] text-white border-white/20">
-                  <SelectValue placeholder="Selecciona una empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {empresas.map((empresa) => (
-                    <SelectItem key={empresa.id} value={empresa.id}>
-                      {empresa.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {/* Company Selector - All users can see this */}
+        <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+          <CardHeader>
+            <CardTitle className="text-white">Seleccionar Empresa</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Select value={selectedEmpresaId} onValueChange={setSelectedEmpresaId}>
+              <SelectTrigger className="bg-[#00404A] text-white border-white/20">
+                <SelectValue placeholder="Selecciona una empresa" />
+              </SelectTrigger>
+              <SelectContent>
+                {empresas.map((empresa) => (
+                  <SelectItem key={empresa.id} value={empresa.id}>
+                    {empresa.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            {selectedEmpresa && (
+            {/* Only superadmin can edit company details */}
+            {isSuperAdmin && selectedEmpresa && (
               <div className="space-y-4 pt-4 border-t border-white/20">
                 <h3 className="text-white font-semibold">Editar Empresa</h3>
                 
@@ -372,7 +365,6 @@ const AdminTariffs = () => {
             )}
           </CardContent>
         </Card>
-        )}
 
         {selectedEmpresaId && (
           <>
