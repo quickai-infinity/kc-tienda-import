@@ -140,13 +140,18 @@ const Index = () => {
         }}
       />
 
-      {/* Top navigation */}
-      <div className="absolute top-6 right-4 flex items-center gap-4 z-10">
+      {/* Top navigation - Respects safe area on notched devices */}
+      <div 
+        className="absolute right-4 flex items-center gap-4 z-10"
+        style={{
+          top: 'max(env(safe-area-inset-top, 0px) + 1.5rem, 1.5rem)'
+        }}
+      >
         {!isAuthenticated ? (
           <>
             <button
               onClick={() => navigate('/login')}
-              className="px-4 py-2 text-sm font-medium transition-colors"
+              className="px-4 py-2 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg"
               style={{
                 color: companyBranding?.text_color || '#FFFFFF'
               }}
@@ -155,7 +160,7 @@ const Index = () => {
             </button>
             <button
               onClick={() => navigate('/register')}
-              className="px-4 py-2 text-sm font-medium transition-colors"
+              className="px-4 py-2 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg"
               style={{
                 color: companyBranding?.text_color || '#FFFFFF'
               }}
@@ -168,7 +173,7 @@ const Index = () => {
             {isSuperAdmin && (
               <button
                 onClick={() => navigate('/settings')}
-                className="transition-colors"
+                className="transition-colors backdrop-blur-sm bg-black/20 rounded-lg p-2"
                 style={{
                   color: companyBranding?.text_color || '#FFFFFF'
                 }}
@@ -178,7 +183,7 @@ const Index = () => {
             )}
             <button
               onClick={() => navigate('/admin/tariffs')}
-              className="px-3 py-1.5 text-sm font-medium transition-colors"
+              className="px-3 py-1.5 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg"
               style={{
                 color: companyBranding?.text_color || '#FFFFFF'
               }}
@@ -190,7 +195,7 @@ const Index = () => {
                 await supabase.auth.signOut();
                 navigate('/');
               }}
-              className="px-3 py-1.5 text-sm font-medium transition-colors"
+              className="px-3 py-1.5 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg"
               style={{
                 color: companyBranding?.text_color || '#FFFFFF'
               }}
@@ -201,11 +206,13 @@ const Index = () => {
         )}
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center">
+      <div className="flex-1 flex flex-col items-center justify-center" style={{
+        paddingTop: 'max(env(safe-area-inset-top, 0px) + 4rem, 4rem)'
+      }}>
         <div className="max-w-md w-full space-y-8 text-center">
-          {/* Logo centrado arriba */}
+          {/* Logo centrado arriba - más espacio superior en móviles con notch */}
           {(companyBranding?.logo_url || branding?.logo_url) && (
-            <div className="flex justify-center mb-12">
+            <div className="flex justify-center mb-8 mt-4">
               <img 
                 src={companyBranding?.logo_url || branding?.logo_url || ""} 
                 alt={companyBranding?.company_name || branding?.app_name || "Logo"} 
