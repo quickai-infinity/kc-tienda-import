@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 import Footer from "@/components/Footer";
 
 interface ClientCard {
@@ -11,6 +13,17 @@ interface ClientCard {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+
+  // Check authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/login");
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
   const clients: ClientCard[] = [
     { id: "1", name: "Ana Pérez", savings: "189 €/año" },

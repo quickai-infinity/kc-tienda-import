@@ -30,6 +30,17 @@ const Processing = () => {
     { id: "cups", label: "CUPS", completed: false },
   ]);
 
+  // Check authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/login");
+      }
+    };
+    checkAuth();
+  }, [navigate]);
+
   useEffect(() => {
     const file = location.state?.file;
     

@@ -1,58 +1,72 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
-import { useBranding } from "@/contexts/BrandingContext";
 
-const Login = () => {
+const Register = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { refreshBranding } = useBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [repeatPassword, setRepeatPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showRepeatPassword, setShowRepeatPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/');
-      }
-    };
-    checkAuth();
-  }, [navigate]);
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (password !== repeatPassword) {
+      toast({
+        title: "Error",
+        description: "Las contraseñas no coinciden",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Error",
+        description: "La contraseña debe tener al menos 6 caracteres",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
 
       if (error) throw error;
 
-      // Refresh branding after login
-      await refreshBranding();
+      // Insert user role as 'user' by default
+      if (data.user) {
+        await supabase.from("user_roles").insert({
+          user_id: data.user.id,
+          role: "user",
+        });
+      }
 
       toast({
-        title: "Inicio de sesión exitoso",
-        description: "Bienvenido de vuelta",
+        title: "Registro exitoso",
+        description: "Ya puedes iniciar sesión con tu cuenta",
       });
 
-      navigate("/");
+      navigate("/login");
     } catch (error: any) {
       toast({
-        title: "Error de autenticación",
-        description: error.message || "Credenciales incorrectas",
+        title: "Error de registro",
+        description: error.message || "No se pudo crear la cuenta",
         variant: "destructive",
       });
     } finally {
@@ -61,19 +75,28 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36]">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] relative">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate('/login')}
+        className="absolute top-6 left-4 flex items-center gap-2 text-white hover:text-white/80 transition-colors z-10"
+      >
+        <ArrowLeft className="h-6 w-6" />
+        <span className="text-lg font-medium">Atrás</span>
+      </button>
+
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
-              Iniciar sesión
+              Crear cuenta
             </h1>
             <p className="text-white/70 text-lg">
-              Accede a tu cuenta
+              Regístrate para comenzar
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleRegister} className="space-y-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 space-y-4 shadow-lg">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-white text-sm font-medium">
@@ -113,6 +136,30 @@ const Login = () => {
                   </button>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="repeatPassword" className="text-white text-sm font-medium">
+                  Repetir contraseña
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="repeatPassword"
+                    type={showRepeatPassword ? "text" : "password"}
+                    value={repeatPassword}
+                    onChange={(e) => setRepeatPassword(e.target.value)}
+                    className="bg-[#00404A] text-white border-none rounded-xl h-12 pr-12"
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRepeatPassword(!showRepeatPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
+                  >
+                    {showRepeatPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
             </div>
 
             <Button
@@ -120,27 +167,17 @@ const Login = () => {
               disabled={loading}
               className="w-full h-14 text-lg rounded-2xl bg-[#0A8754] hover:bg-[#0A8754]/90 text-white shadow-lg"
             >
-              {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+              {loading ? "Creando cuenta..." : "Crear cuenta"}
             </Button>
 
-            <div className="text-center space-y-3">
+            <div className="text-center">
               <button
                 type="button"
-                onClick={() => navigate("/register")}
+                onClick={() => navigate("/login")}
                 className="text-white/80 hover:text-white text-sm"
               >
-                ¿No tienes cuenta? <span className="font-semibold">Crear cuenta</span>
+                ¿Ya tienes cuenta? <span className="font-semibold">Iniciar sesión</span>
               </button>
-
-              <div>
-                <button
-                  type="button"
-                  onClick={() => navigate("/reset-password")}
-                  className="text-white/60 hover:text-white/80 text-sm"
-                >
-                  ¿Olvidaste tu contraseña?
-                </button>
-              </div>
             </div>
           </form>
         </div>
@@ -151,4 +188,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;
