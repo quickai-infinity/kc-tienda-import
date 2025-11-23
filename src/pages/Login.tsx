@@ -95,18 +95,27 @@ const Login = () => {
     <div className="min-h-screen flex flex-col" style={{ 
       background: companyBranding?.background_color 
         ? `linear-gradient(to bottom, ${companyBranding.background_color}, ${companyBranding.background_color})`
-        : 'linear-gradient(to bottom, #003942, #002F36)'
+        : 'linear-gradient(to bottom, #003942, #002F36)',
+      paddingTop: 'max(env(safe-area-inset-top, 0px), 0px)',
+      paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0px)'
     }}>
       {/* Back Button */}
       <button
         onClick={() => navigate("/")}
-        className="absolute top-6 left-4 flex items-center gap-2 text-white transition-colors z-10"
+        className="absolute left-4 flex items-center gap-2 text-white transition-colors z-10"
+        style={{
+          top: 'max(calc(env(safe-area-inset-top, 0px) + 1.5rem), 1.5rem)'
+        }}
       >
         <span className="text-lg">←</span>
         <span className="text-lg font-medium">Atrás</span>
       </button>
 
-      <div className="flex-1 flex items-center justify-center px-4">
+      <div className="flex-1 flex items-center justify-center px-4"
+        style={{
+          paddingTop: 'max(calc(env(safe-area-inset-top, 0px) + 4rem), 4rem)'
+        }}
+      >
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
