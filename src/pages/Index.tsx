@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Upload, Camera, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Upload, Camera, Settings } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useBranding } from "@/contexts/BrandingContext";
 import {
   Select,
   SelectContent,
@@ -17,7 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin } = useUserRole();
+  const { branding } = useBranding();
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentCompany, setCurrentCompany] = useState<string>("");
@@ -146,6 +148,17 @@ const Index = () => {
         >
           <Settings className="h-6 w-6" />
         </button>
+      )}
+
+      {/* Logo in header */}
+      {branding?.logo_url && (
+        <div className="absolute top-6 left-4 z-10">
+          <img 
+            src={branding.logo_url} 
+            alt={branding.app_name || "Logo"} 
+            className="h-10 w-auto object-contain"
+          />
+        </div>
       )}
 
       <div className="flex-1 flex flex-col items-center justify-center">
