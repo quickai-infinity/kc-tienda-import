@@ -49,7 +49,7 @@ interface ServicioAdicional {
 const AdminTariffs = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isSuperAdmin, isCompanyAdmin, companyId, loading: roleLoading } = useUserRole();
   const { refreshBranding } = useBranding();
 
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -80,10 +80,17 @@ const AdminTariffs = () => {
 
   // Check admin access
   useEffect(() => {
-    if (!roleLoading && !isAdmin) {
+    if (!roleLoading && !isSuperAdmin && !isCompanyAdmin) {
       navigate("/");
     }
-  }, [isAdmin, roleLoading, navigate]);
+  }, [isSuperAdmin, isCompanyAdmin, roleLoading, navigate]);
+
+  // Auto-select company for company_admin
+  useEffect(() => {
+    if (isCompanyAdmin && companyId && !selectedEmpresaId) {
+      setSelectedEmpresaId(companyId);
+    }
+  }, [isCompanyAdmin, companyId, selectedEmpresaId]);
 
   // Load empresas
   useEffect(() => {
@@ -276,7 +283,7 @@ const AdminTariffs = () => {
   };
 
   if (roleLoading) return null;
-  if (!isAdmin) return null;
+  if (!isSuperAdmin && !isCompanyAdmin) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#003942] to-[#002F36] px-4 py-8">
@@ -291,24 +298,25 @@ const AdminTariffs = () => {
       <div className="max-w-4xl mx-auto space-y-8 pt-16">
         <h1 className="text-3xl font-bold text-white text-center">Administración de Tarifas</h1>
 
-        {/* Company Selector */}
-        <Card className="bg-white/10 backdrop-blur-sm border-white/20">
-          <CardHeader>
-            <CardTitle className="text-white">Seleccionar Empresa</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Select value={selectedEmpresaId} onValueChange={setSelectedEmpresaId}>
-              <SelectTrigger className="bg-[#00404A] text-white border-white/20">
-                <SelectValue placeholder="Selecciona una empresa" />
-              </SelectTrigger>
-              <SelectContent>
-                {empresas.map((empresa) => (
-                  <SelectItem key={empresa.id} value={empresa.id}>
-                    {empresa.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Company Selector - Only for superadmin */}
+        {isSuperAdmin && (
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+            <CardHeader>
+              <CardTitle className="text-white">Seleccionar Empresa</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Select value={selectedEmpresaId} onValueChange={setSelectedEmpresaId}>
+                <SelectTrigger className="bg-[#00404A] text-white border-white/20">
+                  <SelectValue placeholder="Selecciona una empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {empresas.map((empresa) => (
+                    <SelectItem key={empresa.id} value={empresa.id}>
+                      {empresa.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
             {selectedEmpresa && (
               <div className="space-y-4 pt-4 border-t border-white/20">
@@ -354,6 +362,7 @@ const AdminTariffs = () => {
             )}
           </CardContent>
         </Card>
+        )}
 
         {selectedEmpresaId && (
           <>

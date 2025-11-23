@@ -31,7 +31,7 @@ interface CompanyBranding {
 const BrandManager = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isSuperAdmin, loading: roleLoading } = useUserRole();
   const [companies, setCompanies] = useState<CompanyBranding[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string>("");
   const [branding, setBranding] = useState<CompanyBranding | null>(null);
@@ -40,7 +40,7 @@ const BrandManager = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!roleLoading && !isAdmin) {
+    if (!roleLoading && !isSuperAdmin) {
       navigate("/");
       return;
     }
@@ -63,7 +63,7 @@ const BrandManager = () => {
     };
 
     fetchCompanies();
-  }, [isAdmin, roleLoading, navigate, toast]);
+  }, [isSuperAdmin, roleLoading, navigate, toast]);
 
   useEffect(() => {
     if (selectedCompany) {

@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type UserRole = "admin" | "user" | null;
+export type UserRole = "superadmin" | "company_admin" | "user" | null;
 
 export const useUserRole = () => {
   const [role, setRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -14,6 +15,7 @@ export const useUserRole = () => {
         
         if (!user) {
           setRole(null);
+          setCompanyId(null);
           setLoading(false);
           return;
         }
@@ -25,14 +27,23 @@ export const useUserRole = () => {
           .single();
 
         if (error) {
-          // If no role found, default to 'user'
           setRole("user");
         } else {
           setRole(data.role as UserRole);
         }
+
+        // Fetch company_id from profiles
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("company_id")
+          .eq("user_id", user.id)
+          .single();
+
+        setCompanyId(profileData?.company_id || null);
       } catch (error) {
         console.error("Error fetching user role:", error);
         setRole("user");
+        setCompanyId(null);
       } finally {
         setLoading(false);
       }
@@ -47,5 +58,12 @@ export const useUserRole = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  return { role, loading, isAdmin: role === "admin" };
+  return { 
+    role, 
+    loading, 
+    companyId,
+    isSuperAdmin: role === "superadmin",
+    isCompanyAdmin: role === "company_admin",
+    isUser: role === "user"
+  };
 };
