@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { CheckCircle2, Circle } from "lucide-react";
 
 interface ProcessingItem {
@@ -8,6 +9,7 @@ interface ProcessingItem {
 }
 
 const Processing = () => {
+  const navigate = useNavigate();
   const [items, setItems] = useState<ProcessingItem[]>([
     { id: "consumo", label: "Consumo mensual", completed: false },
     { id: "tarifa", label: "Tarifa actual", completed: false },
@@ -31,8 +33,15 @@ const Processing = () => {
       timers.push(timer);
     });
 
+    // Navigate to results after all items are completed
+    const finalTimer = setTimeout(() => {
+      navigate('/results');
+    }, 7000); // Navigate after 7 seconds (all items done + small delay)
+    
+    timers.push(finalTimer);
+
     return () => timers.forEach(timer => clearTimeout(timer));
-  }, []);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#003942] to-[#002F36] px-4">
