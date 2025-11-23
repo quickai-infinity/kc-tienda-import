@@ -106,12 +106,19 @@ const Processing = () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Usuario no autenticado');
 
+        console.log("Saving factura with data:", {
+          empresa_actual: extractedData.empresa,
+          empresa_destino: location.state?.compareCompany,
+          consumo_kwh: extractedData.consumo_kwh,
+          precio_mensual: extractedData.precio_mensual
+        });
+
         const { error: dbError } = await supabase
           .from('facturas')
           .insert({
             user_id: user.id,
             empresa_actual: extractedData.empresa,
-            empresa_destino: location.state?.compareCompany,
+            empresa_destino: location.state?.compareCompany || null,
             consumo_kwh: extractedData.consumo_kwh,
             potencia_kw: extractedData.potencia_kw || 4.6,
             precio_mensual_estimado: extractedData.precio_mensual,
@@ -119,6 +126,8 @@ const Processing = () => {
 
         if (dbError) {
           console.error("Error saving to database:", dbError);
+        } else {
+          console.log("Factura saved successfully");
         }
 
         // Navigate to results with extracted data
