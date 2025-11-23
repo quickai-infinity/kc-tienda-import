@@ -113,7 +113,7 @@ const BrandManager = () => {
       const fileExt = file.name.split(".").pop();
       const fileName = `${branding.company_name.toLowerCase()}-${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from("company-logos")
         .upload(fileName, file, {
           cacheControl: "3600",
@@ -122,20 +122,24 @@ const BrandManager = () => {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
+      // Get public URL with cache buster
       const { data: { publicUrl } } = supabase.storage
         .from("company-logos")
         .getPublicUrl(fileName);
 
+      const logoUrlWithCacheBuster = `${publicUrl}?v=${Date.now()}`;
+
       // Update database
       const { error: updateError } = await supabase
         .from("company_branding")
-        .update({ logo_url: publicUrl })
+        .update({ logo_url: logoUrlWithCacheBuster })
         .eq("id", branding.id);
 
       if (updateError) throw updateError;
 
-      // Force refresh of company list from database
+      // Wait a bit then refresh company list
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       const { data: refreshedCompanies } = await supabase
         .from("company_branding")
         .select("*")
@@ -143,7 +147,6 @@ const BrandManager = () => {
 
       if (refreshedCompanies) {
         setCompanies(refreshedCompanies);
-        // Update current branding with fresh data
         const updatedBranding = refreshedCompanies.find(c => c.id === branding.id);
         if (updatedBranding) {
           setBranding(updatedBranding);
