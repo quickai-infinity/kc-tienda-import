@@ -178,20 +178,42 @@ const BrandManager = () => {
     setSaving(true);
 
     try {
+      const updateData = {
+        primary_color: branding.primary_color,
+        secondary_color: branding.secondary_color,
+        accent_color: branding.accent_color,
+        text_color: branding.text_color,
+        background_color: branding.background_color,
+        website_url: branding.website_url,
+        last_updated: new Date().toISOString(),
+      };
+
       const { error } = await supabase
         .from("company_branding")
-        .update({
-          primary_color: branding.primary_color,
-          secondary_color: branding.secondary_color,
-          accent_color: branding.accent_color,
-          text_color: branding.text_color,
-          background_color: branding.background_color,
-          website_url: branding.website_url,
-          last_updated: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq("id", branding.id);
 
       if (error) throw error;
+
+      // Wait for DB to process
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Refresh the company list to get fresh data
+      const { data: refreshedCompanies, error: fetchError } = await supabase
+        .from("company_branding")
+        .select("*")
+        .order("company_name");
+
+      if (fetchError) throw fetchError;
+
+      if (refreshedCompanies) {
+        setCompanies(refreshedCompanies);
+        // Update current branding with fresh data from DB
+        const updatedBranding = refreshedCompanies.find(c => c.id === branding.id);
+        if (updatedBranding) {
+          setBranding(updatedBranding);
+        }
+      }
 
       toast({
         title: "Guardado",
