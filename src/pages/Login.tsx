@@ -12,7 +12,7 @@ import { useBranding } from "@/contexts/BrandingContext";
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { refreshBranding } = useBranding();
+  const { refreshBranding, companyBranding } = useBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -61,7 +61,11 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36]">
+    <div className="min-h-screen flex flex-col" style={{ 
+      background: companyBranding?.background_color 
+        ? `linear-gradient(to bottom, ${companyBranding.background_color}, ${companyBranding.background_color})`
+        : 'linear-gradient(to bottom, #003942, #002F36)'
+    }}>
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">

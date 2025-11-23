@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useBranding } from "@/contexts/BrandingContext";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Footer from "@/components/Footer";
@@ -21,6 +22,7 @@ const Results = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { companyBranding } = useBranding();
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [email, setEmail] = useState("");
   
@@ -63,7 +65,11 @@ const Results = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] px-4 py-8 relative">
+    <div className="min-h-screen flex flex-col px-4 py-8 relative" style={{ 
+      background: companyBranding?.background_color 
+        ? `linear-gradient(to bottom, ${companyBranding.background_color}, ${companyBranding.background_color})`
+        : 'linear-gradient(to bottom, #003942, #002F36)'
+    }}>
       {/* Back Button */}
       <button
         onClick={() => navigate('/')}
