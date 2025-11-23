@@ -76,10 +76,13 @@ const Index = () => {
     
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session);
       if (session?.user) {
-        await checkUserApproval();
+        // Defer Supabase calls to prevent deadlock
+        setTimeout(() => {
+          checkUserApproval();
+        }, 0);
       } else {
         setUserApproved(null);
       }
