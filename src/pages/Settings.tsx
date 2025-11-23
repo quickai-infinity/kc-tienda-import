@@ -79,28 +79,28 @@ const Settings = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Verify the data before saving
+      const dataToSave = {
+        app_name: appName,
+        primary_color: primaryColor,
+        show_only_my_company: showOnlyMyCompany,
+        active_company: activeCompany === "none" ? null : activeCompany,
+      };
+
       const { error } = await supabase
         .from("branding")
-        .update({
-          app_name: appName,
-          primary_color: primaryColor,
-          show_only_my_company: showOnlyMyCompany,
-          active_company: activeCompany || null,
-        })
+        .update(dataToSave)
         .eq("id", branding?.id);
 
       if (error) throw error;
 
-      // Esperar un momento para que la base de datos procese el cambio
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      // Refresh branding to get latest data
-      await refreshBranding();
+      // Wait for realtime subscription to update
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Success - show specific confirmation message
       toast({
         title: "Configuración guardada",
-        description: activeCompany 
+        description: activeCompany && activeCompany !== "none"
           ? `La empresa activa se cambió correctamente a ${activeCompany}` 
           : "Se han aplicado los cambios correctamente.",
       });
@@ -155,7 +155,7 @@ const Settings = () => {
       const fileExt = file.name.split('.').pop();
       const fileName = `logo-${Date.now()}.${fileExt}`;
       
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('logos')
         .upload(fileName, file, {
           cacheControl: '3600',
@@ -164,21 +164,23 @@ const Settings = () => {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
+      // Get public URL with cache buster
       const { data: { publicUrl } } = supabase.storage
         .from('logos')
         .getPublicUrl(fileName);
 
+      const logoUrlWithCacheBuster = `${publicUrl}?v=${Date.now()}`;
+
       // Update branding table
       const { error: updateError } = await supabase
         .from("branding")
-        .update({ logo_url: publicUrl })
+        .update({ logo_url: logoUrlWithCacheBuster })
         .eq("id", branding?.id);
 
       if (updateError) throw updateError;
 
-      // Refresh branding
-      await refreshBranding();
+      // Wait for realtime to propagate
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       toast({
         title: "Logo actualizado",
