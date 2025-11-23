@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface CompanyOption {
@@ -8,6 +10,7 @@ interface CompanyOption {
 }
 
 const Results = () => {
+  const navigate = useNavigate();
   const savingsPerMonth = "32,47";
   const savingsPerYear = "389,64";
 
@@ -19,7 +22,16 @@ const Results = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#003942] to-[#002F36] px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#003942] to-[#002F36] px-4 py-8 relative">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate('/')}
+        className="absolute top-6 left-4 flex items-center gap-2 text-white hover:text-white/80 transition-colors"
+      >
+        <ArrowLeft className="h-6 w-6" />
+        <span className="text-lg font-medium">Atrás</span>
+      </button>
+
       <div className="max-w-md mx-auto space-y-8">
         {/* Savings Header */}
         <div className="text-center space-y-4 pt-8">
