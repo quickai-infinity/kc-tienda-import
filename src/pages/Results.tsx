@@ -80,91 +80,108 @@ const Results = () => {
       // Empresa mostrada: la seleccionada por el usuario o la del OCR
       const displayCompany = currentCompany;
       
-      console.log('Loading tariff for:', { displayCompany, precioActual, consumoKwh });
+      console.log('Loading all companies for comparison:', { displayCompany, precioActual, consumoKwh });
       
-      const calculatedCompanies: CompanyOption[] = [];
-
-      // Buscar la empresa en la base de datos (case-insensitive)
-      const { data: empresa } = await supabase
+      // Cargar TODAS las empresas para comparar
+      const { data: todasEmpresas } = await supabase
         .from("empresas")
-        .select("id")
-        .ilike("nombre", displayCompany)
-        .single();
+        .select("id, nombre");
 
-      console.log(`Company ${displayCompany}:`, empresa);
+      console.log('All companies:', todasEmpresas);
 
-      if (!empresa) {
-        // Si no está en BD, usar precio del OCR si disponible
-        calculatedCompanies.push({
-          id: displayCompany || "",
-          name: displayCompany || "",
-          pricePerMonth: precioActual,
-          hasTariff: false,
-        });
-      } else {
-        // Get tariff based on tariff type
-        let calculatedPrice: number | null = null;
+      const calculatedCompanies: CompanyOption[] = [];
+      let currentCompanyPrice: number | null = precioActual;
 
-        if (tariffType === "electricity") {
-          const { data: tarifaElec } = await supabase
-            .from("tarifas_electricidad")
-            .select("*")
-            .eq("empresa_id", empresa.id)
-            .single();
+      // Calcular precio para TODAS las empresas
+      if (todasEmpresas) {
+        for (const empresa of todasEmpresas) {
+          let calculatedPrice: number | null = null;
 
-          console.log(`Tarifa electricidad for ${displayCompany}:`, tarifaElec);
+          if (tariffType === "electricity") {
+            const { data: tarifaElec } = await supabase
+              .from("tarifas_electricidad")
+              .select("*")
+              .eq("empresa_id", empresa.id)
+              .single();
 
-          if (!tarifaElec) {
-            // Sin tarifa configurada, usar precio del OCR
-            calculatedCompanies.push({
-              id: empresa.id,
-              name: displayCompany || "",
-              pricePerMonth: precioActual,
-              hasTariff: false,
-            });
+            if (tarifaElec) {
+              calculatedPrice = calculateMonthlyElectricityPrice(consumoKwh, tarifaElec);
+            }
           } else {
-            calculatedPrice = calculateMonthlyElectricityPrice(consumoKwh, tarifaElec);
-            calculatedCompanies.push({
-              id: empresa.id,
-              name: displayCompany || "",
-              pricePerMonth: calculatedPrice,
-              hasTariff: true,
-            });
+            const { data: tarifaGas } = await supabase
+              .from("tarifas_gas")
+              .select("*")
+              .eq("empresa_id", empresa.id)
+              .single();
+
+            if (tarifaGas) {
+              calculatedPrice = calculateMonthlyGasPrice(consumoKwh, tarifaGas);
+            }
           }
-        } else {
-          const { data: tarifaGas } = await supabase
-            .from("tarifas_gas")
-            .select("*")
-            .eq("empresa_id", empresa.id)
-            .single();
 
-          if (!tarifaGas) {
-            // Sin tarifa configurada, usar precio del OCR
-            calculatedCompanies.push({
-              id: empresa.id,
-              name: displayCompany || "",
-              pricePerMonth: precioActual,
-              hasTariff: false,
-            });
-          } else {
-            calculatedPrice = calculateMonthlyGasPrice(consumoKwh, tarifaGas);
-            calculatedCompanies.push({
-              id: empresa.id,
-              name: displayCompany || "",
-              pricePerMonth: calculatedPrice,
-              hasTariff: true,
-            });
+          calculatedCompanies.push({
+            id: empresa.id,
+            name: empresa.nombre,
+            pricePerMonth: calculatedPrice,
+            hasTariff: calculatedPrice !== null,
+          });
+
+          // Si es la empresa actual, guardar su precio
+          if (empresa.nombre.toUpperCase() === displayCompany.toUpperCase()) {
+            currentCompanyPrice = calculatedPrice || precioActual;
           }
         }
       }
 
-      console.log('Calculated companies:', calculatedCompanies);
+      console.log('All calculated companies:', calculatedCompanies);
+      console.log('Current company price:', currentCompanyPrice);
 
-      setCompanies(calculatedCompanies);
+      // Mostrar solo la empresa actual en la lista
+      const currentCompanyData = calculatedCompanies.find(c => 
+        c.name.toUpperCase() === displayCompany.toUpperCase()
+      );
 
-      // NO HAY AHORRO porque solo mostramos UNA empresa
-      setSavingsPerMonth("0,00");
-      setSavingsPerYear("0,00");
+      if (currentCompanyData) {
+        setCompanies([currentCompanyData]);
+      } else {
+        setCompanies([{
+          id: displayCompany,
+          name: displayCompany,
+          pricePerMonth: precioActual,
+          hasTariff: false,
+        }]);
+      }
+
+      // Calcular ahorro: encontrar la empresa MÁS BARATA
+      const companiesWithPrices = calculatedCompanies.filter(c => c.pricePerMonth !== null);
+      
+      if (companiesWithPrices.length > 0 && currentCompanyPrice !== null) {
+        const cheapestCompany = companiesWithPrices.reduce((prev, current) => 
+          (current.pricePerMonth! < prev.pricePerMonth!) ? current : prev
+        );
+
+        console.log('Cheapest company:', cheapestCompany);
+
+        const monthlyDiff = currentCompanyPrice - (cheapestCompany.pricePerMonth || 0);
+        
+        console.log('Savings calculation:', {
+          currentCompanyPrice,
+          cheapestPrice: cheapestCompany.pricePerMonth,
+          monthlyDiff
+        });
+
+        // Solo mostrar ahorros positivos (cuando cambiar sería más barato)
+        if (monthlyDiff > 0) {
+          setSavingsPerMonth(formatCurrency(monthlyDiff));
+          setSavingsPerYear(formatCurrency(monthlyDiff * 12));
+        } else {
+          setSavingsPerMonth("0,00");
+          setSavingsPerYear("0,00");
+        }
+      } else {
+        setSavingsPerMonth("0,00");
+        setSavingsPerYear("0,00");
+      }
 
       setLoading(false);
     };
