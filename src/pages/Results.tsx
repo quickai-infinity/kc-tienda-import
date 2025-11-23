@@ -1,7 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 import Footer from "@/components/Footer";
 
 interface CompanyOption {
@@ -13,6 +18,9 @@ interface CompanyOption {
 
 const Results = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [email, setEmail] = useState("");
   const savingsPerMonth = "32,47";
   const savingsPerYear = "389,64";
 
@@ -22,6 +30,22 @@ const Results = () => {
     { id: "iberdrola", name: "Iberdrola", pricePerMonth: "35" },
     { id: "totalenergies", name: "TotalEnergies", pricePerMonth: "35" },
   ];
+
+  const handleDownloadPDF = () => {
+    toast({
+      title: "Próximamente",
+      description: "Descarga de informe en PDF disponible próximamente.",
+    });
+  };
+
+  const handleSendEmail = () => {
+    setIsEmailModalOpen(false);
+    setEmail("");
+    toast({
+      title: "Demo",
+      description: "Resultados enviados (modo demo).",
+    });
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#003942] to-[#002F36] px-4 py-8 relative">
@@ -85,6 +109,25 @@ const Results = () => {
           Comparación basada en tu consumo actual
         </div>
 
+        {/* Export Actions */}
+        <div className="flex flex-col gap-3 mt-8">
+          <Button
+            onClick={handleDownloadPDF}
+            className="bg-[#0A8754] hover:bg-[#0A8754]/90 text-white rounded-xl h-14 text-lg font-semibold shadow-lg"
+          >
+            <Download className="mr-2 h-5 w-5" />
+            Descargar informe en PDF
+          </Button>
+          
+          <Button
+            onClick={() => setIsEmailModalOpen(true)}
+            className="bg-[#FFC300] hover:bg-[#FFC300]/90 text-gray-900 rounded-xl h-12 text-base font-semibold shadow-lg"
+          >
+            <Mail className="mr-2 h-5 w-5" />
+            Enviar por email
+          </Button>
+        </div>
+
         {/* Ver Historial Button */}
         <div className="text-center mt-6">
           <Button
@@ -97,6 +140,49 @@ const Results = () => {
         </div>
       </div>
       </div>
+
+      {/* Email Modal */}
+      <Dialog open={isEmailModalOpen} onOpenChange={setIsEmailModalOpen}>
+        <DialogContent className="bg-white rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-900">
+              Enviar resultados por email
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-gray-700">
+                Correo electrónico del cliente
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="cliente@correo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="rounded-lg"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsEmailModalOpen(false)}
+              className="rounded-lg"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSendEmail}
+              className="bg-[#0A8754] hover:bg-[#0A8754]/90 text-white rounded-lg"
+            >
+              Enviar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
