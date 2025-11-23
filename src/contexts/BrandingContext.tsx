@@ -113,7 +113,8 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchBranding();
 
-    // Subscribe to branding changes
+    // Subscribe to branding changes with debounce
+    let timeoutId: NodeJS.Timeout;
     const channel = supabase
       .channel("branding-changes")
       .on(
@@ -124,12 +125,17 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
           table: "branding",
         },
         () => {
-          fetchBranding();
+          // Debounce to avoid race conditions
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            fetchBranding();
+          }, 1000);
         }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
   }, []);
