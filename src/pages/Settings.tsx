@@ -9,6 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Footer from "@/components/Footer";
 
 const Settings = () => {
@@ -19,6 +26,8 @@ const Settings = () => {
   const [appName, setAppName] = useState("Compare Energia");
   const [showOnlyMyCompany, setShowOnlyMyCompany] = useState(false);
   const [primaryColor, setPrimaryColor] = useState("#0A8754");
+  const [activeCompany, setActiveCompany] = useState<string>("");
+  const [companies, setCompanies] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,13 +52,28 @@ const Settings = () => {
     checkAuthAndRole();
   }, [role, roleLoading, navigate]);
 
-  // Load branding data
+  // Load branding data and companies
   useEffect(() => {
     if (branding) {
       setAppName(branding.app_name);
       setPrimaryColor(branding.primary_color);
       setShowOnlyMyCompany(branding.show_only_my_company);
+      setActiveCompany(branding.active_company || "");
     }
+
+    // Fetch companies
+    const fetchCompanies = async () => {
+      const { data } = await supabase
+        .from("company_branding")
+        .select("company_name")
+        .order("company_name");
+
+      if (data) {
+        setCompanies(data.map((c) => c.company_name));
+      }
+    };
+
+    fetchCompanies();
   }, [branding]);
 
   const handleSave = async () => {
@@ -61,6 +85,7 @@ const Settings = () => {
           app_name: appName,
           primary_color: primaryColor,
           show_only_my_company: showOnlyMyCompany,
+          active_company: activeCompany || null,
         })
         .eq("id", branding?.id);
 
@@ -188,6 +213,14 @@ const Settings = () => {
             White Label Settings
           </h1>
 
+          {/* Brand Manager Link */}
+          <Button
+            onClick={() => navigate("/brand-manager")}
+            className="w-full h-14 bg-[#FFC300] hover:bg-[#FFC300]/90 text-gray-900 rounded-2xl shadow-lg font-semibold text-lg"
+          >
+            Brand Manager
+          </Button>
+
           {/* App Name */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 space-y-4 shadow-lg">
             <div className="space-y-2">
@@ -203,28 +236,64 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* Primary Color */}
+          {/* Active Company Selector */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 space-y-4 shadow-lg">
             <div className="space-y-2">
-              <Label htmlFor="primaryColor" className="text-white text-sm font-medium">
-                Color principal
+              <Label className="text-white text-sm font-medium">
+                Empresa activa
               </Label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  id="primaryColor"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="h-12 w-20 rounded-xl cursor-pointer"
-                />
-                <Input
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="bg-[#00404A] text-white border-none rounded-xl h-12 flex-1"
-                />
-              </div>
+              <Select value={activeCompany} onValueChange={setActiveCompany}>
+                <SelectTrigger className="bg-[#00404A] text-white border-none rounded-xl h-12">
+                  <SelectValue placeholder="Ninguna (usar colores por defecto)" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#00404A] border-none rounded-xl">
+                  <SelectItem
+                    value=""
+                    className="text-white focus:bg-[#003942] focus:text-white"
+                  >
+                    Ninguna (usar colores por defecto)
+                  </SelectItem>
+                  {companies.map((company) => (
+                    <SelectItem
+                      key={company}
+                      value={company}
+                      className="text-white focus:bg-[#003942] focus:text-white"
+                    >
+                      {company}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-white/60 text-sm">
+                Selecciona una empresa para aplicar su marca globalmente
+              </p>
             </div>
           </div>
+
+          {/* Primary Color (only shown if no company selected) */}
+          {!activeCompany && (
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 space-y-4 shadow-lg">
+              <div className="space-y-2">
+                <Label htmlFor="primaryColor" className="text-white text-sm font-medium">
+                  Color principal
+                </Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    id="primaryColor"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="h-12 w-20 rounded-xl cursor-pointer"
+                  />
+                  <Input
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="bg-[#00404A] text-white border-none rounded-xl h-12 flex-1"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Logo Upload */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 space-y-4 shadow-lg">

@@ -55,6 +55,7 @@ export type Database = {
       }
       branding: {
         Row: {
+          active_company: string | null
           app_name: string
           id: string
           logo_url: string | null
@@ -63,6 +64,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          active_company?: string | null
           app_name?: string
           id?: string
           logo_url?: string | null
@@ -71,6 +73,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          active_company?: string | null
           app_name?: string
           id?: string
           logo_url?: string | null
@@ -117,6 +120,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      company_branding: {
+        Row: {
+          accent_color: string | null
+          background_color: string | null
+          company_name: string
+          id: string
+          last_updated: string | null
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          text_color: string | null
+          website_url: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          background_color?: string | null
+          company_name: string
+          id?: string
+          last_updated?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          text_color?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          background_color?: string | null
+          company_name?: string
+          id?: string
+          last_updated?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          text_color?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
       }
       comparaciones: {
         Row: {

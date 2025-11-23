@@ -26,7 +26,13 @@
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
     --radius: 0.5rem;
+    
+    /* Brand colors - can be overridden by company branding */
     --brand-primary: #0A8754;
+    --brand-secondary: #FFC300;
+    --brand-accent: #00404A;
+    --brand-text: #FFFFFF;
+    --brand-background: #003942;
   }
 
   .dark {
