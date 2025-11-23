@@ -316,9 +316,8 @@ const Results = () => {
       {/* Back Button */}
       <button
         onClick={() => navigate('/')}
-        className="absolute left-4 flex items-center gap-2 transition-colors z-10"
+        className="absolute top-6 left-4 flex items-center gap-2 transition-colors z-10"
         style={{
-          top: 'max(env(safe-area-inset-top, 0px) + 1.5rem, 1.5rem)',
           color: companyBranding?.text_color || '#FFFFFF'
         }}
       >
