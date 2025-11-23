@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Download, Mail } from "lucide-react";
+import jsPDF from "jspdf";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -148,10 +149,83 @@ const Results = () => {
   }, [extractedData, currentCompany, compareCompany, tariffType]);
 
   const handleDownloadPDF = () => {
-    toast({
-      title: "Función en desarrollo",
-      description: "La generación de PDF estará disponible próximamente.",
-    });
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      
+      // Header
+      doc.setFontSize(20);
+      doc.setTextColor(0, 57, 66); // Petroleum blue
+      doc.text("Informe de Comparación de Tarifas", pageWidth / 2, 20, { align: "center" });
+      
+      // Company branding
+      if (companyBranding?.company_name) {
+        doc.setFontSize(12);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Generado por ${companyBranding.company_name}`, pageWidth / 2, 30, { align: "center" });
+      }
+      
+      // Date
+      doc.setFontSize(10);
+      doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 20, 45);
+      
+      // Extracted data section
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Datos de tu factura", 20, 60);
+      
+      doc.setFontSize(11);
+      doc.text(`Empresa actual: ${extractedData.empresa || 'N/A'}`, 20, 70);
+      doc.text(`Tarifa actual: ${extractedData.tarifa || 'N/A'}`, 20, 78);
+      doc.text(`Consumo mensual: ${extractedData.consumo_kwh || 'N/A'} kWh`, 20, 86);
+      doc.text(`Precio mensual estimado: ${extractedData.precio_mensual || 'N/A'} €`, 20, 94);
+      doc.text(`CUPS: ${extractedData.cups || 'N/A'}`, 20, 102);
+      
+      // Savings section
+      doc.setFontSize(16);
+      doc.setTextColor(10, 135, 84); // Green
+      doc.text("Ahorro Estimado", 20, 120);
+      
+      doc.setFontSize(14);
+      doc.text(`${savingsPerMonth} €/mes`, 20, 132);
+      doc.text(`${savingsPerYear} €/año`, 20, 142);
+      
+      // Company comparison section
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Comparación de Empresas", 20, 160);
+      
+      let yPosition = 170;
+      companies.forEach((company, index) => {
+        doc.setFontSize(11);
+        const priceText = company.hasTariff && company.pricePerMonth !== null 
+          ? `${formatCurrency(company.pricePerMonth)} €/mes`
+          : 'Sin datos de tarifa';
+        
+        doc.text(`${company.name}: ${priceText}`, 25, yPosition + (index * 10));
+      });
+      
+      // Footer
+      doc.setFontSize(9);
+      doc.setTextColor(150, 150, 150);
+      doc.text("© 2025 KC Informatika — Todos los derechos reservados.", pageWidth / 2, 280, { align: "center" });
+      
+      // Save PDF
+      const fileName = `comparacion_tarifas_${new Date().getTime()}.pdf`;
+      doc.save(fileName);
+      
+      toast({
+        title: "PDF generado",
+        description: "El informe se ha descargado correctamente.",
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo generar el PDF. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSendEmail = () => {
