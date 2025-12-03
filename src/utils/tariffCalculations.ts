@@ -212,11 +212,10 @@ export const calculateElectricityComparison = (
   const consumoP2 = ocrData.consumo_p2_kwh ?? 0;
   const consumoP3 = ocrData.consumo_p3_kwh ?? 0;
 
-  // CRITICAL FIX: potencia_p1 is stored as €/kW/AÑO (year), NOT daily
-  // Must convert to €/kW/día by dividing by 365
+  // potencia_p1 is stored as €/kW/día (daily) - NO conversion needed
   let precioPotenciaDiario = 0;
   if (adminTarifa.potencia_p1 !== null && adminTarifa.potencia_p1 !== undefined) {
-    precioPotenciaDiario = adminTarifa.potencia_p1 / 365;
+    precioPotenciaDiario = adminTarifa.potencia_p1;
   }
   
   const totalPotencia = potenciaKw * dias * precioPotenciaDiario;
@@ -385,8 +384,8 @@ export const calculateNewElectricityCost = (
   const consumo_p2 = ocrData.consumo_p2_kwh ?? 0;
   const consumo_p3 = ocrData.consumo_p3_kwh ?? 0;
 
-  // CRITICAL: Convert €/kW/año to €/kW/día
-  const precioPotenciaDiario = (adminTarifa.potencia_p1 ?? 0) / 365;
+  // potencia_p1 already in €/kW/día - no conversion needed
+  const precioPotenciaDiario = adminTarifa.potencia_p1 ?? 0;
   const potencia_cost = potencia_kw * dias * precioPotenciaDiario;
   
   // Energy - use only available prices
@@ -465,7 +464,7 @@ const DEFAULT_CONTRACTED_POWER = 4.6;
 export const calculateMonthlyElectricityPrice = (consumoKwh: number, tarifa: TarifaElectricidad): number | null => {
   // Use only available values - don't block
   const energyPrice = tarifa.energia_p1 ?? 0;
-  const powerPrice = (tarifa.potencia_p1 ?? 0) / 365; // Convert from €/kW/año to €/kW/día
+  const powerPrice = tarifa.potencia_p1 ?? 0; // Already in €/kW/día
   
   const energyCost = consumoKwh * energyPrice;
   const powerCost = powerPrice * 30 * DEFAULT_CONTRACTED_POWER;
