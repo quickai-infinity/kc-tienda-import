@@ -102,6 +102,10 @@ export const calculateCurrentElectricityCost = (data: ElectricityInvoiceData): n
   // Power cost: USE THE SUBTOTAL FROM INVOICE DIRECTLY (reliable)
   // Do NOT calculate from potencia_kw * days * potencia_price (unreliable)
   const powerCostCurrent = data.termino_potencia_euros;
+  
+  if (powerCostCurrent === 0) {
+    console.warn('⚠️ Power subtotal (termino_potencia_euros) is 0 - current power cost will be 0');
+  }
 
   // Energy cost from invoice prices
   const energyCostCurrent =
