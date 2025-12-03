@@ -116,6 +116,15 @@ const Processing = () => {
 
         const extractedData: ExtractedData = result.data;
 
+        // Show validation warning for electricity invoices (non-blocking)
+        if (result.validationWarning && tariffType === "electricity") {
+          toast({
+            title: "Aviso de validación",
+            description: result.validationWarning,
+            variant: "default",
+          });
+        }
+
         // Determine current company: use selected dropdown value or OCR extracted value
         const selectedCompany = location.state?.selectedCompany || localStorage.getItem('selectedCompany') || "";
         const currentCompany = selectedCompany || extractedData.empresa || "";
