@@ -30,7 +30,10 @@ const Results = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { companyBranding } = useBranding();
+  const { companyBranding, branding } = useBranding();
+  
+  // Empresa activa del branding (ej: Repsol) - siempre usar esta para comparar
+  const empresaComparacion = branding?.active_company || "";
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [email, setEmail] = useState("");
   
@@ -161,9 +164,10 @@ const Results = () => {
 
       // For electricity: use new comparison logic
       if (tariffType === "electricity") {
-        // Find the company to compare against (the selected company from dropdown)
+        // Find the company to compare against (the ACTIVE company from branding, e.g., Repsol)
+        const empresaTarget = empresaComparacion || displayCompany;
         const targetCompany = calculatedCompanies.find(c => 
-          c.name.toUpperCase() === displayCompany.toUpperCase()
+          c.name.toUpperCase() === empresaTarget.toUpperCase()
         );
 
         if (targetCompany) {
