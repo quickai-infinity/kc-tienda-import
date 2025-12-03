@@ -202,20 +202,20 @@ const Results = () => {
               // Positive savings
               setSavingsPerMonth(formatCurrency(diferencia));
               setSavingsPerYear(formatCurrency(diferencia * 12));
-              setComparisonMessage(`Con ${targetCompany.name} ahorrarías ${formatCurrency(diferencia)} €/mes.`);
+              setComparisonMessage(`Con ${targetCompany.name} pagarías ${formatCurrency(comparison.totalComparacion)} €/mes. Ahorro estimado: ${formatCurrency(diferencia)} €/mes.`);
               setComparisonMessageType('positive');
             } else if (diferencia <= -0.01) {
               // New tariff is more expensive
               const extraCost = Math.abs(diferencia);
               setSavingsPerMonth(`+${formatCurrency(extraCost)}`);
               setSavingsPerYear(`+${formatCurrency(extraCost * 12)}`);
-              setComparisonMessage(`Con ${targetCompany.name} pagarías ${formatCurrency(extraCost)} €/mes más.`);
+              setComparisonMessage(`Con ${targetCompany.name} pagarías ${formatCurrency(comparison.totalComparacion)} €/mes. Coste adicional: ${formatCurrency(extraCost)} €/mes.`);
               setComparisonMessageType('negative');
             } else {
               // No significant difference
               setSavingsPerMonth("0,00");
               setSavingsPerYear("0,00");
-              setComparisonMessage("No hay diferencia significativa entre las tarifas.");
+              setComparisonMessage(`Con ${targetCompany.name} pagarías ${formatCurrency(comparison.totalComparacion)} €/mes. Sin diferencia significativa.`);
               setComparisonMessageType('neutral');
             }
           } else {
@@ -256,18 +256,18 @@ const Results = () => {
           } else if (monthlyDiff > 0.01) {
             setSavingsPerMonth(formatCurrency(monthlyDiff));
             setSavingsPerYear(formatCurrency(monthlyDiff * 12));
-            setComparisonMessage(`Con ${cheapestCompany.name} ahorrarías ${formatCurrency(monthlyDiff)} €/mes.`);
+            setComparisonMessage(`Con ${cheapestCompany.name} pagarías ${formatCurrency(cheapestCompany.pricePerMonth || 0)} €/mes. Ahorro estimado: ${formatCurrency(monthlyDiff)} €/mes.`);
             setComparisonMessageType('positive');
           } else if (monthlyDiff < -0.01) {
             const extraCost = Math.abs(monthlyDiff);
             setSavingsPerMonth(`+${formatCurrency(extraCost)}`);
             setSavingsPerYear(`+${formatCurrency(extraCost * 12)}`);
-            setComparisonMessage(`Con ${cheapestCompany.name} pagarías ${formatCurrency(extraCost)} €/mes más.`);
+            setComparisonMessage(`Con ${cheapestCompany.name} pagarías ${formatCurrency(cheapestCompany.pricePerMonth || 0)} €/mes. Coste adicional: ${formatCurrency(extraCost)} €/mes.`);
             setComparisonMessageType('negative');
           } else {
             setSavingsPerMonth("0,00");
             setSavingsPerYear("0,00");
-            setComparisonMessage("No hay diferencia significativa entre las tarifas.");
+            setComparisonMessage(`Con ${cheapestCompany.name} pagarías ${formatCurrency(cheapestCompany.pricePerMonth || 0)} €/mes. Sin diferencia significativa.`);
             setComparisonMessageType('neutral');
           }
         } else {
