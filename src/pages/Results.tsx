@@ -402,6 +402,83 @@ const Results = () => {
           </div>
         </div>
 
+        {/* Electricity Extracted Data Preview - Only for electricity invoices */}
+        {tariffType === "electricity" && extractedData && (
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-5 space-y-3 shadow-lg border border-white/10">
+            <h3 className="text-lg font-semibold mb-3" style={{
+              color: companyBranding?.text_color || '#FFFFFF'
+            }}>
+              Datos extraídos de la factura
+            </h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between items-center">
+                <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}99` : 'rgba(255, 255, 255, 0.6)' }}>Días del periodo:</span>
+                <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {extractedData.potencia_days ?? '--'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}99` : 'rgba(255, 255, 255, 0.6)' }}>Potencia contratada (kW):</span>
+                <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {extractedData.potencia_kw ?? '--'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}99` : 'rgba(255, 255, 255, 0.6)' }}>Precio potencia (€/kW día):</span>
+                <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {extractedData.potencia_price ?? '--'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}99` : 'rgba(255, 255, 255, 0.6)' }}>Consumo P1 (kWh):</span>
+                <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {extractedData.consumo_p1 ?? '--'}
+                </span>
+              </div>
+              {extractedData.consumo_p2 !== undefined && extractedData.consumo_p2 !== null && (
+                <div className="flex justify-between items-center">
+                  <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}99` : 'rgba(255, 255, 255, 0.6)' }}>Consumo P2 (kWh):</span>
+                  <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                    {extractedData.consumo_p2}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}99` : 'rgba(255, 255, 255, 0.6)' }}>Precio Energía P1 (€/kWh):</span>
+                <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {extractedData.energia_p1_price ?? '--'}
+                </span>
+              </div>
+              {extractedData.energia_p2_price !== undefined && extractedData.energia_p2_price !== null && (
+                <div className="flex justify-between items-center">
+                  <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}99` : 'rgba(255, 255, 255, 0.6)' }}>Precio Energía P2 (€/kWh):</span>
+                  <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                    {extractedData.energia_p2_price}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}99` : 'rgba(255, 255, 255, 0.6)' }}>Impuesto eléctrico (%):</span>
+                <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {extractedData.impuesto_electrico ?? '--'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}99` : 'rgba(255, 255, 255, 0.6)' }}>IVA (%):</span>
+                <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {extractedData.iva ?? '--'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                <span className="font-medium" style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Total factura original:</span>
+                <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {extractedData.precio_mensual ? `${extractedData.precio_mensual} €` : '--'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Savings Header */}
         <div className="text-center space-y-4 pt-4">
           <h2 className="text-xl md:text-2xl font-bold" style={{
