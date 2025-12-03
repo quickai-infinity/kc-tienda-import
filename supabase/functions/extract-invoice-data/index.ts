@@ -5,176 +5,204 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Electricity extraction tool with extended fields for validation
+/**
+ * ELECTRICITY INVOICE OCR EXTRACTION
+ * ===================================
+ * 
+ * CRITICAL RULES:
+ * 1. Extract ONLY what appears in the invoice
+ * 2. If a field is not found → return null (NEVER invent or assume)
+ * 3. NEVER convert null to 0
+ * 4. NEVER generate fallback values
+ * 5. Preserve original units (€/kW/día vs €/kW/mes)
+ */
+
+// Electricity extraction tool - all fields optional except minimum identifiers
 const electricityTool = {
   type: "function",
   function: {
     name: "extract_invoice_data",
-    description: "Extraer datos estructurados de una factura de electricidad española",
+    description: "Extraer datos de factura eléctrica española. Solo extraer lo que aparece en la factura. Si un campo no existe, devolver null.",
     parameters: {
       type: "object",
       properties: {
-        consumo_kwh: {
-          type: "number",
-          description: "Consumo total mensual en kWh"
-        },
-        tarifa: {
-          type: "string",
-          description: "Nombre de la tarifa contratada"
+        // Invoice identification
+        empresa: {
+          type: ["string", "null"],
+          description: "Nombre de la empresa proveedora de electricidad"
         },
         cups: {
-          type: "string",
-          description: "Código CUPS (20-22 caracteres)"
+          type: ["string", "null"],
+          description: "Código CUPS (20-22 caracteres). Si no aparece, devolver null"
         },
-        empresa: {
-          type: "string",
-          description: "Nombre de la empresa proveedora"
+        tarifa: {
+          type: ["string", "null"],
+          description: "Nombre de la tarifa contratada (ej: 2.0TD, PVPC)"
         },
+        
+        // Invoice total - MOST IMPORTANT
         precio_mensual: {
-          type: "number",
-          description: "Precio total mensual en euros"
+          type: ["number", "null"],
+          description: "Importe TOTAL de la factura en euros. Buscar 'Total factura', 'Importe total', 'Total a pagar'"
         },
-        potencia_kw: {
-          type: "number",
-          description: "Potencia contratada en kW"
-        },
-        // Extended fields for validation
-        potencia_price: {
-          type: "number",
-          description: "Precio del término de potencia en €/kW/día"
-        },
-        potencia_days: {
-          type: "number",
-          description: "Número de días del periodo de facturación"
-        },
+        
+        // Period
         fecha_inicio: {
-          type: "string",
-          description: "Fecha de inicio del periodo de facturación (YYYY-MM-DD)"
+          type: ["string", "null"],
+          description: "Fecha inicio periodo facturación (YYYY-MM-DD). Si no aparece, null"
         },
         fecha_fin: {
-          type: "string",
-          description: "Fecha de fin del periodo de facturación (YYYY-MM-DD)"
+          type: ["string", "null"],
+          description: "Fecha fin periodo facturación (YYYY-MM-DD). Si no aparece, null"
         },
-        consumo_p1: {
-          type: "number",
-          description: "Consumo en periodo P1 (punta) en kWh"
+        potencia_days: {
+          type: ["number", "null"],
+          description: "Días del periodo de facturación. Si no aparece explícitamente, null"
         },
-        consumo_p2: {
-          type: "number",
-          description: "Consumo en periodo P2 (llano) en kWh"
+        
+        // Power (Potencia)
+        potencia_kw: {
+          type: ["number", "null"],
+          description: "Potencia contratada en kW. Buscar en 'Datos del contrato', 'Potencia contratada'"
         },
-        consumo_p3: {
-          type: "number",
-          description: "Consumo en periodo P3 (valle) en kWh"
+        potencia_price: {
+          type: ["number", "null"],
+          description: "Precio potencia en €/kW/día. IMPORTANTE: verificar si es €/kW/día o €/kW/mes"
         },
-        energia_p1_price: {
-          type: "number",
-          description: "Precio energía P1 en €/kWh"
-        },
-        energia_p2_price: {
-          type: "number",
-          description: "Precio energía P2 en €/kWh"
-        },
-        energia_p3_price: {
-          type: "number",
-          description: "Precio energía P3 en €/kWh"
+        potencia_price_unit: {
+          type: ["string", "null"],
+          description: "Unidad del precio de potencia: 'dia' o 'mes'. Esto es CRÍTICO para cálculos correctos"
         },
         termino_potencia_euros: {
-          type: "number",
-          description: "Importe total del término de potencia en euros"
+          type: ["number", "null"],
+          description: "Importe total del término de potencia en euros (subtotal). Buscar 'Término de potencia', 'Por potencia contratada'"
+        },
+        
+        // Consumption
+        consumo_kwh: {
+          type: ["number", "null"],
+          description: "Consumo TOTAL en kWh del periodo"
+        },
+        consumo_p1: {
+          type: ["number", "null"],
+          description: "Consumo periodo P1 (punta) en kWh. Si no hay desglose, null"
+        },
+        consumo_p2: {
+          type: ["number", "null"],
+          description: "Consumo periodo P2 (llano) en kWh. Si no hay desglose, null"
+        },
+        consumo_p3: {
+          type: ["number", "null"],
+          description: "Consumo periodo P3 (valle) en kWh. Si no hay desglose, null"
+        },
+        
+        // Energy prices
+        energia_p1_price: {
+          type: ["number", "null"],
+          description: "Precio energía P1 en €/kWh. Solo si aparece explícitamente"
+        },
+        energia_p2_price: {
+          type: ["number", "null"],
+          description: "Precio energía P2 en €/kWh. Solo si aparece explícitamente"
+        },
+        energia_p3_price: {
+          type: ["number", "null"],
+          description: "Precio energía P3 en €/kWh. Solo si aparece explícitamente"
         },
         termino_energia_euros: {
-          type: "number",
-          description: "Importe total del término de energía en euros"
+          type: ["number", "null"],
+          description: "Importe total del término de energía en euros (subtotal)"
         },
+        
+        // Taxes
         impuesto_electrico: {
-          type: "number",
-          description: "Porcentaje del impuesto eléctrico (normalmente 5.11%)"
+          type: ["number", "null"],
+          description: "Porcentaje del impuesto eléctrico. Solo si aparece explícitamente"
         },
         iva: {
-          type: "number",
-          description: "Porcentaje de IVA aplicado (normalmente 21%)"
+          type: ["number", "null"],
+          description: "Porcentaje de IVA aplicado. Solo si aparece explícitamente"
         }
       },
-      required: ["consumo_kwh", "tarifa", "cups", "empresa", "precio_mensual"],
+      required: ["empresa", "precio_mensual"],
       additionalProperties: false
     }
   }
 };
 
-// Gas extraction tool with specific gas fields
+// Gas extraction tool
 const gasTool = {
   type: "function",
   function: {
     name: "extract_gas_invoice_data",
-    description: "Extraer datos estructurados de una factura de gas natural",
+    description: "Extraer datos de factura de gas natural. Solo extraer lo que aparece. Si no existe, devolver null.",
     parameters: {
       type: "object",
       properties: {
         empresa: {
-          type: "string",
+          type: ["string", "null"],
           description: "Nombre de la empresa proveedora de gas"
         },
         termino_fijo: {
-          type: "number",
+          type: ["number", "null"],
           description: "Término fijo mensual en €/mes"
         },
         termino_variable: {
-          type: "number",
+          type: ["number", "null"],
           description: "Término variable en €/kWh"
         },
         lectura_anterior: {
-          type: "number",
+          type: ["number", "null"],
           description: "Lectura anterior del contador en m3"
         },
         lectura_actual: {
-          type: "number",
+          type: ["number", "null"],
           description: "Lectura actual del contador en m3"
         },
         factor_conversion: {
-          type: "number",
-          description: "Factor de conversión kWh/m3 (normalmente entre 10 y 12)"
+          type: ["number", "null"],
+          description: "Factor de conversión kWh/m3"
         },
         tarifa_atr: {
-          type: "string",
-          description: "Tarifa de acceso ATR (TUR1, TUR2, RL.1, RL.2, etc.)"
+          type: ["string", "null"],
+          description: "Tarifa ATR (TUR1, TUR2, RL.1, etc.)"
         },
         iva: {
-          type: "number",
-          description: "Porcentaje de IVA aplicado (normalmente 21)"
+          type: ["number", "null"],
+          description: "Porcentaje de IVA"
         },
         consumo_m3: {
-          type: "number",
+          type: ["number", "null"],
           description: "Consumo en metros cúbicos"
         },
         consumo_kwh: {
-          type: "number",
-          description: "Consumo convertido a kWh"
+          type: ["number", "null"],
+          description: "Consumo en kWh"
         },
         precio_mensual: {
-          type: "number",
-          description: "Precio total de la factura en euros"
+          type: ["number", "null"],
+          description: "Precio total de la factura"
         },
         fecha_inicio: {
-          type: "string",
-          description: "Fecha de inicio del periodo de facturación"
+          type: ["string", "null"],
+          description: "Fecha inicio periodo"
         },
         fecha_fin: {
-          type: "string",
-          description: "Fecha de fin del periodo de facturación"
+          type: ["string", "null"],
+          description: "Fecha fin periodo"
         },
         dias_periodo: {
-          type: "number",
-          description: "Días del periodo de facturación"
+          type: ["number", "null"],
+          description: "Días del periodo"
         }
       },
-      required: ["empresa", "consumo_kwh", "precio_mensual"],
+      required: ["empresa", "precio_mensual"],
       additionalProperties: false
     }
   }
 };
 
-// Helper function to calculate days between two dates
+// Calculate days between dates (helper - ONLY used for informational purposes)
 function calculateDaysBetween(dateStart: string, dateEnd: string): number | null {
   try {
     const start = new Date(dateStart);
@@ -187,128 +215,109 @@ function calculateDaysBetween(dateStart: string, dateEnd: string): number | null
   }
 }
 
-// Apply fallback logic for electricity invoices
-function applyElectricityFallbacks(data: any): { data: any; fallbacks: string[] } {
-  const fallbacks: string[] = [];
-
-  // A. DAYS - If missing, calculate from dates or use default 30
-  if (!data.potencia_days || data.potencia_days === null) {
-    if (data.fecha_inicio && data.fecha_fin) {
-      const calculatedDays = calculateDaysBetween(data.fecha_inicio, data.fecha_fin);
-      if (calculatedDays) {
-        data.potencia_days = calculatedDays;
-        fallbacks.push(`Días del periodo calculados de fechas: ${calculatedDays} días`);
-      } else {
-        data.potencia_days = 30;
-        fallbacks.push("Días del periodo: 30 (ciclo estándar por defecto)");
-      }
-    } else {
-      data.potencia_days = 30;
-      fallbacks.push("Días del periodo: 30 (ciclo estándar por defecto)");
+/**
+ * Process extracted data - MINIMAL fallbacks
+ * 
+ * ONLY the following automatic calculations are allowed:
+ * 1. Calculate days from dates IF both dates are present
+ * 2. Use consumo_kwh as consumo_p1 IF no P1/P2/P3 breakdown exists
+ * 
+ * ALL OTHER FIELDS must remain null if not extracted
+ */
+function processElectricityData(data: any): { data: any; detectedFields: string[]; estimatedFields: string[] } {
+  const detectedFields: string[] = [];
+  const estimatedFields: string[] = [];
+  
+  // Track which fields were actually detected in the invoice
+  const allFields = [
+    'empresa', 'cups', 'tarifa', 'precio_mensual',
+    'fecha_inicio', 'fecha_fin', 'potencia_days',
+    'potencia_kw', 'potencia_price', 'potencia_price_unit', 'termino_potencia_euros',
+    'consumo_kwh', 'consumo_p1', 'consumo_p2', 'consumo_p3',
+    'energia_p1_price', 'energia_p2_price', 'energia_p3_price', 'termino_energia_euros',
+    'impuesto_electrico', 'iva'
+  ];
+  
+  for (const field of allFields) {
+    if (data[field] !== null && data[field] !== undefined) {
+      detectedFields.push(field);
     }
   }
 
-  // B. POWER (POTENCIA) - Estimate if missing
-  if (!data.potencia_kw || data.potencia_kw === null) {
-    if (data.termino_potencia_euros && data.potencia_price && data.potencia_days) {
-      // potencia = (Término de potencia €) / (precio potencia €/kW·día × days)
-      const estimatedPower = data.termino_potencia_euros / (data.potencia_price * data.potencia_days);
-      if (estimatedPower > 0 && estimatedPower < 50) { // Sanity check
-        data.potencia_kw = Math.round(estimatedPower * 100) / 100;
-        fallbacks.push(`Potencia estimada: ${data.potencia_kw} kW (calculada del término de potencia)`);
-      } else {
-        data.potencia_kw = 4.6; // Common residential power
-        fallbacks.push("Potencia contratada: 4.6 kW (residencial estándar)");
-      }
-    } else {
-      data.potencia_kw = 4.6;
-      fallbacks.push("Potencia contratada: 4.6 kW (residencial estándar)");
+  // ALLOWED CALCULATION 1: Days from dates
+  if ((data.potencia_days === null || data.potencia_days === undefined) && 
+      data.fecha_inicio && data.fecha_fin) {
+    const calculatedDays = calculateDaysBetween(data.fecha_inicio, data.fecha_fin);
+    if (calculatedDays !== null) {
+      data.potencia_days = calculatedDays;
+      estimatedFields.push(`Días calculados de fechas: ${calculatedDays}`);
     }
   }
 
-  // C. POWER PRICE - Set to 0 if missing (don't block calculation)
-  if (!data.potencia_price || data.potencia_price === null) {
-    data.potencia_price = 0;
-    fallbacks.push("Precio potencia: no disponible (se usa 0)");
+  // ALLOWED CALCULATION 2: consumo_p1 = consumo_kwh if no breakdown
+  if ((data.consumo_p1 === null || data.consumo_p1 === undefined) && 
+      data.consumo_kwh !== null && data.consumo_kwh !== undefined) {
+    data.consumo_p1 = data.consumo_kwh;
+    estimatedFields.push(`Consumo P1 = consumo total: ${data.consumo_kwh} kWh`);
   }
 
-  // D. ENERGY PRICE - Calculate from totals if missing
-  if (!data.energia_p1_price || data.energia_p1_price === null) {
-    if (data.termino_energia_euros && data.consumo_kwh && data.consumo_kwh > 0) {
-      data.energia_p1_price = Math.round((data.termino_energia_euros / data.consumo_kwh) * 100000) / 100000;
-      fallbacks.push(`Precio energía P1 calculado: ${data.energia_p1_price} €/kWh (total energía / consumo)`);
-    }
+  // Convert potencia_price from €/kW/mes to €/kW/día if needed
+  if (data.potencia_price !== null && data.potencia_price_unit === 'mes') {
+    const originalPrice = data.potencia_price;
+    data.potencia_price = data.potencia_price / 30;
+    estimatedFields.push(`Precio potencia convertido: ${originalPrice} €/kW/mes → ${data.potencia_price.toFixed(6)} €/kW/día`);
   }
 
-  // E. ENERGY CONSUMPTION - Use total as P1 if P1/P2/P3 missing
-  if (!data.consumo_p1 || data.consumo_p1 === null) {
-    if (data.consumo_kwh) {
-      data.consumo_p1 = data.consumo_kwh;
-      fallbacks.push(`Consumo P1 = consumo total: ${data.consumo_kwh} kWh`);
-    }
-  }
+  console.log('📋 Processed electricity data:', {
+    detected: detectedFields,
+    estimated: estimatedFields
+  });
 
-  // F. ELECTRICITY TAX - Default 5.1127%
-  if (!data.impuesto_electrico || data.impuesto_electrico === null) {
-    data.impuesto_electrico = 5.1127;
-    fallbacks.push("Impuesto eléctrico: 5.1127% (por defecto)");
-  }
-
-  // G. IVA - Default 21%
-  if (!data.iva || data.iva === null) {
-    data.iva = 21;
-    fallbacks.push("IVA: 21% (por defecto)");
-  }
-
-  return { data, fallbacks };
+  return { data, detectedFields, estimatedFields };
 }
 
-// Apply fallback logic for gas invoices
-function applyGasFallbacks(data: any): { data: any; fallbacks: string[] } {
-  const fallbacks: string[] = [];
-
-  // Calculate days from dates if not present
-  if (!data.dias_periodo || data.dias_periodo === null) {
-    if (data.fecha_inicio && data.fecha_fin) {
-      const calculatedDays = calculateDaysBetween(data.fecha_inicio, data.fecha_fin);
-      if (calculatedDays) {
-        data.dias_periodo = calculatedDays;
-        fallbacks.push(`Días del periodo calculados: ${calculatedDays} días`);
-      } else {
-        data.dias_periodo = 30;
-        fallbacks.push("Días del periodo: 30 (por defecto)");
-      }
-    } else {
-      data.dias_periodo = 30;
-      fallbacks.push("Días del periodo: 30 (por defecto)");
+function processGasData(data: any): { data: any; detectedFields: string[]; estimatedFields: string[] } {
+  const detectedFields: string[] = [];
+  const estimatedFields: string[] = [];
+  
+  const allFields = [
+    'empresa', 'termino_fijo', 'termino_variable',
+    'lectura_anterior', 'lectura_actual', 'factor_conversion',
+    'tarifa_atr', 'iva', 'consumo_m3', 'consumo_kwh',
+    'precio_mensual', 'fecha_inicio', 'fecha_fin', 'dias_periodo'
+  ];
+  
+  for (const field of allFields) {
+    if (data[field] !== null && data[field] !== undefined) {
+      detectedFields.push(field);
     }
   }
 
-  // Calculate consumption in m3 if we have readings
-  if (data.lectura_actual && data.lectura_anterior && (!data.consumo_m3 || data.consumo_m3 === null)) {
+  // Calculate days from dates if not present
+  if ((data.dias_periodo === null || data.dias_periodo === undefined) && 
+      data.fecha_inicio && data.fecha_fin) {
+    const calculatedDays = calculateDaysBetween(data.fecha_inicio, data.fecha_fin);
+    if (calculatedDays !== null) {
+      data.dias_periodo = calculatedDays;
+      estimatedFields.push(`Días calculados de fechas: ${calculatedDays}`);
+    }
+  }
+
+  // Calculate consumo_m3 from readings if not present
+  if ((data.consumo_m3 === null || data.consumo_m3 === undefined) &&
+      data.lectura_actual !== null && data.lectura_anterior !== null) {
     data.consumo_m3 = data.lectura_actual - data.lectura_anterior;
-    fallbacks.push(`Consumo m³ calculado: ${data.consumo_m3} m³ (lectura actual - anterior)`);
+    estimatedFields.push(`Consumo m³ calculado: ${data.consumo_m3}`);
   }
 
-  // Default conversion factor if not found
-  if (!data.factor_conversion || data.factor_conversion === null) {
-    data.factor_conversion = 11.0;
-    fallbacks.push("Factor conversión: 11.0 kWh/m³ (por defecto)");
-  }
-
-  // Calculate consumption in kWh if we have m3 and conversion factor
-  if (data.consumo_m3 && data.factor_conversion && (!data.consumo_kwh || data.consumo_kwh === null)) {
+  // Calculate consumo_kwh from m3 and factor if not present
+  if ((data.consumo_kwh === null || data.consumo_kwh === undefined) &&
+      data.consumo_m3 !== null && data.factor_conversion !== null) {
     data.consumo_kwh = data.consumo_m3 * data.factor_conversion;
-    fallbacks.push(`Consumo kWh calculado: ${data.consumo_kwh} kWh (m³ × factor conversión)`);
+    estimatedFields.push(`Consumo kWh calculado: ${data.consumo_kwh}`);
   }
 
-  // Default IVA if not found
-  if (!data.iva || data.iva === null) {
-    data.iva = 21;
-    fallbacks.push("IVA: 21% (por defecto)");
-  }
-
-  return { data, fallbacks };
+  return { data, detectedFields, estimatedFields };
 }
 
 serve(async (req) => {
@@ -322,10 +331,7 @@ serve(async (req) => {
       console.error("LOVABLE_API_KEY not configured");
       return new Response(
         JSON.stringify({ error: "AI service not configured" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -336,22 +342,16 @@ serve(async (req) => {
     if (!file) {
       return new Response(
         JSON.stringify({ error: "No file provided" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Validate file size (10MB limit)
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
       return new Response(
         JSON.stringify({ error: "El archivo excede el límite de 10MB" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -362,17 +362,14 @@ serve(async (req) => {
     
     if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension || '')) {
       return new Response(
-        JSON.stringify({ error: "Tipo de archivo no permitido. Solo se aceptan PDF, JPG y PNG" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Tipo de archivo no permitido. Solo PDF, JPG, PNG" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Processing file:", file.name, "Type:", file.type, "Tariff Type:", tariffType);
+    console.log("Processing file:", file.name, "Type:", file.type, "Tariff:", tariffType);
 
-    // Convert file to base64 in chunks to avoid stack overflow
+    // Convert to base64
     const arrayBuffer = await file.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
     const chunkSize = 8192;
@@ -385,88 +382,74 @@ serve(async (req) => {
     
     const base64 = btoa(binary);
     
-    // Determine mime type
     let mimeType = file.type;
     if (!mimeType) {
       if (file.name.endsWith('.pdf')) mimeType = 'application/pdf';
       else if (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg')) mimeType = 'image/jpeg';
       else if (file.name.endsWith('.png')) mimeType = 'image/png';
-      else mimeType = 'image/jpeg'; // default
+      else mimeType = 'image/jpeg';
     }
 
     const imageUrl = `data:${mimeType};base64,${base64}`;
-
-    // Choose prompt and tool based on tariff type
     const isGas = tariffType === "gas";
     
-    const electricityPrompt = `Analiza esta factura de electricidad española y extrae la siguiente información:
+    // CRITICAL: Prompt emphasizes extracting ONLY what exists
+    const electricityPrompt = `Analiza esta factura de ELECTRICIDAD española.
 
-CAMPOS PRINCIPALES:
-- Consumo mensual total en kWh (busca "Consumo" o "kWh")
-- Tarifa actual (nombre de la tarifa contratada)
-- CUPS (Código Universal del Punto de Suministro - 20-22 caracteres alfanuméricos)
-- Empresa proveedora
-- Precio total mensual en euros (importe total factura)
-- Potencia contratada en kW (busca en "Datos del contrato", "Término de potencia", "Potencia contratada")
+REGLAS CRÍTICAS:
+1. Extrae ÚNICAMENTE los datos que aparecen en la factura
+2. Si un campo NO aparece → devuelve null (NO inventes valores)
+3. NUNCA asumas valores por defecto
+4. Verifica las UNIDADES del precio de potencia: ¿es €/kW/día o €/kW/mes?
 
-CAMPOS DE FECHAS:
-- Fecha de inicio del periodo de facturación (formato YYYY-MM-DD)
-- Fecha de fin del periodo de facturación (formato YYYY-MM-DD)
-- Número de días del periodo de facturación
+CAMPOS A BUSCAR:
+- empresa: nombre del proveedor de electricidad
+- cups: código CUPS (20-22 caracteres)
+- tarifa: nombre de la tarifa (2.0TD, PVPC, etc.)
+- precio_mensual: IMPORTE TOTAL de la factura (buscar "Total factura", "Total a pagar")
+- fecha_inicio, fecha_fin: periodo de facturación
+- potencia_days: días del periodo (si aparece explícitamente)
+- potencia_kw: potencia contratada en kW
+- potencia_price: precio del término de potencia (verificar si es €/kW/día o €/kW/mes)
+- potencia_price_unit: "dia" o "mes" según las unidades mostradas
+- termino_potencia_euros: importe total del término de potencia
+- consumo_kwh: consumo total en kWh
+- consumo_p1, consumo_p2, consumo_p3: desglose por periodos (si existe)
+- energia_p1_price, energia_p2_price, energia_p3_price: precios €/kWh por periodo
+- termino_energia_euros: importe total del término de energía
+- impuesto_electrico: porcentaje del impuesto eléctrico
+- iva: porcentaje de IVA
 
-CAMPOS DE POTENCIA:
-- Precio del término de potencia (€/kW/día)
-- Importe total del término de potencia en euros
+Si NO encuentras un dato, devuelve null para ese campo.`;
 
-CAMPOS DE CONSUMO Y ENERGÍA:
-- Consumo en periodo P1 (punta) en kWh
-- Consumo en periodo P2 (llano) en kWh
-- Consumo en periodo P3 (valle) en kWh
-- Precio energía P1 (€/kWh)
-- Precio energía P2 (€/kWh)
-- Precio energía P3 (€/kWh)
-- Importe total del término de energía en euros
+    const gasPrompt = `Analiza esta factura de GAS NATURAL española.
 
-IMPUESTOS:
-- Porcentaje del impuesto eléctrico (normalmente 5.11%)
-- Porcentaje de IVA (normalmente 21%)
+REGLAS CRÍTICAS:
+1. Extrae ÚNICAMENTE los datos que aparecen en la factura
+2. Si un campo NO aparece → devuelve null
+3. NUNCA inventes valores
 
-Si la factura solo muestra consumo total sin desglose P1/P2/P3, usa el consumo total como P1.
-Si no encuentras algún dato, devuelve null para ese campo.`;
+CAMPOS A BUSCAR:
+- empresa: proveedor de gas
+- termino_fijo: €/mes
+- termino_variable: €/kWh
+- lectura_anterior, lectura_actual: lecturas del contador en m³
+- factor_conversion: kWh/m³
+- tarifa_atr: TUR1, TUR2, RL.1, etc.
+- iva: porcentaje
+- consumo_m3, consumo_kwh
+- precio_mensual: total factura
+- fecha_inicio, fecha_fin
+- dias_periodo
 
-    const gasPrompt = `Analiza esta factura de GAS NATURAL española y extrae la siguiente información específica de gas:
-
-CAMPOS REQUERIDOS:
-- Empresa proveedora de gas
-- Término fijo (€/mes) - busca "término fijo", "cargo fijo", "fijo mensual"
-- Término variable (€/kWh) - busca "término variable", "precio kWh", "€/kWh"
-- Lectura anterior del contador (m3) - busca "lectura anterior", "anterior"
-- Lectura actual del contador (m3) - busca "lectura actual", "actual"
-- Factor de conversión (kWh/m3) - normalmente entre 10 y 12, busca "factor conversión", "PCS"
-- Tarifa ATR - busca "TUR1", "TUR2", "RL.1", "RL.2", "ATR", "tarifa acceso"
-- IVA aplicado (porcentaje, normalmente 21%)
-- Consumo en m3 (diferencia entre lecturas o valor indicado)
-- Consumo en kWh (m3 × factor conversión o valor indicado)
-- Precio total de la factura en euros
-
-CAMPOS DE FECHAS:
-- Fecha de inicio del periodo de facturación
-- Fecha de fin del periodo de facturación
-- Días del periodo de facturación
-
-IMPORTANTE: 
-- Busca palabras clave de gas: "m3", "metros cúbicos", "kWh/m3", "gas natural", "término fijo gas", "término variable gas"
-- NO extraer campos de electricidad como CUPS, potencia P1/P2, impuesto eléctrico
-- Si no encuentras algún dato, devuelve null para ese campo
-- El factor de conversión típico es entre 10.5 y 11.5 kWh/m3`;
+Si NO encuentras un dato, devuelve null.`;
 
     const prompt = isGas ? gasPrompt : electricityPrompt;
     const tool = isGas ? gasTool : electricityTool;
     const toolName = isGas ? "extract_gas_invoice_data" : "extract_invoice_data";
 
-    console.log("Calling Lovable AI for", isGas ? "GAS" : "ELECTRICITY", "data extraction");
+    console.log("Calling AI for", isGas ? "GAS" : "ELECTRICITY", "extraction");
 
-    // Call Lovable AI with tool calling for structured extraction
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -479,16 +462,8 @@ IMPORTANTE:
           {
             role: "user",
             content: [
-              {
-                type: "text",
-                text: prompt
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl
-                }
-              }
+              { type: "text", text: prompt },
+              { type: "image_url", image_url: { url: imageUrl } }
             ]
           }
         ],
@@ -503,126 +478,74 @@ IMPORTANTE:
       
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Límite de solicitudes alcanzado. Intenta de nuevo en unos momentos." }),
-          {
-            status: 429,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          JSON.stringify({ error: "Límite de solicitudes alcanzado. Intenta de nuevo." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       
       if (response.status === 402) {
         return new Response(
           JSON.stringify({ error: "Créditos agotados. Contacta con soporte." }),
-          {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       return new Response(
         JSON.stringify({ error: "Error al procesar la factura" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const data = await response.json();
-    console.log("AI Response:", JSON.stringify(data, null, 2));
+    const aiData = await response.json();
+    console.log("AI Response:", JSON.stringify(aiData, null, 2));
 
-    // Extract tool call result
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) {
       console.error("No tool call in response");
       return new Response(
         JSON.stringify({ error: "No se pudieron extraer los datos de la factura" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     let extractedData = JSON.parse(toolCall.function.arguments);
     console.log("Raw extracted data:", extractedData);
 
-    // Store detected fields before applying fallbacks
-    const detectedFields: string[] = [];
-    const checkFields = isGas 
-      ? ['empresa', 'consumo_kwh', 'consumo_m3', 'termino_fijo', 'termino_variable', 'lectura_anterior', 'lectura_actual', 'factor_conversion', 'iva', 'precio_mensual', 'tarifa_atr']
-      : ['empresa', 'consumo_kwh', 'potencia_kw', 'potencia_price', 'potencia_days', 'consumo_p1', 'consumo_p2', 'energia_p1_price', 'energia_p2_price', 'impuesto_electrico', 'iva', 'precio_mensual'];
+    // Process data with minimal calculations
+    let detectedFields: string[] = [];
+    let estimatedFields: string[] = [];
     
-    for (const field of checkFields) {
-      if (extractedData[field] !== null && extractedData[field] !== undefined) {
-        detectedFields.push(field);
-      }
-    }
-
-    // Apply fallback logic based on invoice type
-    let fallbacks: string[] = [];
     if (isGas) {
-      const result = applyGasFallbacks(extractedData);
+      const result = processGasData(extractedData);
       extractedData = result.data;
-      fallbacks = result.fallbacks;
+      detectedFields = result.detectedFields;
+      estimatedFields = result.estimatedFields;
     } else {
-      const result = applyElectricityFallbacks(extractedData);
+      const result = processElectricityData(extractedData);
       extractedData = result.data;
-      fallbacks = result.fallbacks;
+      detectedFields = result.detectedFields;
+      estimatedFields = result.estimatedFields;
     }
 
-    console.log("Processed extracted data:", extractedData);
-    console.log("Detected fields:", detectedFields);
-    console.log("Fallbacks applied:", fallbacks);
-
-    // Validation warning for electricity invoices (informational only)
-    let validationWarning: string | null = null;
-    if (!isGas) {
-      const requiredElectricityFields = [
-        'potencia_price',
-        'potencia_days', 
-        'consumo_p1',
-        'energia_p1_price',
-        'impuesto_electrico',
-        'iva'
-      ];
-      
-      const originalMissing = requiredElectricityFields.filter(field => 
-        !detectedFields.includes(field)
-      );
-      
-      if (originalMissing.length > 0) {
-        console.log("Electricity validation warning - originally missing fields:", originalMissing);
-        validationWarning = "Algunos campos fueron estimados usando valores por defecto.";
-      }
-    }
+    console.log("Final processed data:", extractedData);
 
     return new Response(
       JSON.stringify({
         success: true,
         data: extractedData,
         tariffType: tariffType,
-        validationWarning: validationWarning,
         detectedFields: detectedFields,
-        fallbacksApplied: fallbacks
+        fallbacksApplied: estimatedFields,
+        validationWarning: null
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
     console.error("Error in extract-invoice-data:", error);
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : "Error desconocido" 
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ error: error instanceof Error ? error.message : "Error desconocido" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
