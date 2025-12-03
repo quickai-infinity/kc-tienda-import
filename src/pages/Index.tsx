@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Upload, Camera, Settings, Menu, X } from "lucide-react";
+import { Upload, Camera, Settings, Menu, X, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
+import ManualInvoiceForm from "@/components/ManualInvoiceForm";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -39,8 +40,9 @@ const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userApproved, setUserApproved] = useState<boolean | null>(null);
   const [compareCompany, setCompareCompany] = useState<string>("");
-  const [tariffType, setTariffType] = useState<"electricity" | "gas">("electricity");
+  const [tariffType, setTariffType] = useState<"electricity" | "gas" | "manual">("electricity");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showManualForm, setShowManualForm] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -555,7 +557,15 @@ const Index = () => {
               }}>
                 Tipo de tarifa
               </label>
-              <Select value={tariffType} onValueChange={(value: "electricity" | "gas") => setTariffType(value)}>
+              <Select 
+                value={tariffType} 
+                onValueChange={(value: "electricity" | "gas" | "manual") => {
+                  setTariffType(value);
+                  if (value === "manual") {
+                    setShowManualForm(true);
+                  }
+                }}
+              >
                 <SelectTrigger className="w-full h-14 bg-[#00404A] text-white border-none rounded-2xl shadow-lg text-lg">
                   <SelectValue />
                 </SelectTrigger>
@@ -571,6 +581,12 @@ const Index = () => {
                     className="text-white text-lg focus:bg-[#003942] focus:text-white"
                   >
                     Gas
+                  </SelectItem>
+                  <SelectItem
+                    value="manual"
+                    className="text-white text-lg focus:bg-[#003942] focus:text-white"
+                  >
+                    Ingresar valores manualmente
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -680,6 +696,36 @@ const Index = () => {
               Instalar
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Invoice Form Dialog */}
+      <Dialog 
+        open={showManualForm} 
+        onOpenChange={(open) => {
+          setShowManualForm(open);
+          if (!open) {
+            setTariffType("electricity"); // Reset to electricity when closing
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              Ingresar valores de factura
+            </DialogTitle>
+            <DialogDescription>
+              Introduce los datos de tu factura eléctrica para compararla con {compareCompany || "la empresa seleccionada"}
+            </DialogDescription>
+          </DialogHeader>
+          <ManualInvoiceForm
+            compareCompany={compareCompany}
+            isAuthenticated={isAuthenticated}
+            onClose={() => {
+              setShowManualForm(false);
+              setTariffType("electricity");
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>
