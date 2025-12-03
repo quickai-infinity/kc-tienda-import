@@ -30,6 +30,31 @@ interface TarifaElectricidad {
   iva: number | null;
 }
 
+// String state for input fields (allows comma/period)
+interface TarifaElectricidadInput {
+  potencia_p1: string;
+  potencia_p2: string;
+  energia_p1: string;
+  energia_p2: string;
+  energia_p3: string;
+  impuesto_electrico: string;
+  iva: string;
+}
+
+// Helper to convert string input to number (replaces comma with period)
+const parseInputToNumber = (value: string): number | null => {
+  if (!value || value.trim() === "") return null;
+  const normalized = value.replace(",", ".");
+  const parsed = parseFloat(normalized);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
+// Helper to convert number to input string
+const numberToInputString = (value: number | null): string => {
+  if (value === null || value === undefined) return "";
+  return String(value);
+};
+
 interface TarifaGas {
   id?: string;
   empresa_id: string;
@@ -65,6 +90,17 @@ const AdminTariffs = () => {
     energia_p3: null,
     impuesto_electrico: null,
     iva: null,
+  });
+
+  // String inputs for electricity tariff (allows comma/period entry)
+  const [tarifaElectricidadInput, setTarifaElectricidadInput] = useState<TarifaElectricidadInput>({
+    potencia_p1: "",
+    potencia_p2: "",
+    energia_p1: "",
+    energia_p2: "",
+    energia_p3: "",
+    impuesto_electrico: "",
+    iva: "",
   });
 
   const [tarifaGas, setTarifaGas] = useState<TarifaGas>({
@@ -122,6 +158,15 @@ const AdminTariffs = () => {
 
     if (elecData) {
       setTarifaElectricidad(elecData);
+      setTarifaElectricidadInput({
+        potencia_p1: numberToInputString(elecData.potencia_p1),
+        potencia_p2: numberToInputString(elecData.potencia_p2),
+        energia_p1: numberToInputString(elecData.energia_p1),
+        energia_p2: numberToInputString(elecData.energia_p2),
+        energia_p3: numberToInputString(elecData.energia_p3),
+        impuesto_electrico: numberToInputString(elecData.impuesto_electrico),
+        iva: numberToInputString(elecData.iva),
+      });
     } else {
       setTarifaElectricidad({
         empresa_id: empresaId,
@@ -132,6 +177,15 @@ const AdminTariffs = () => {
         energia_p3: null,
         impuesto_electrico: null,
         iva: null,
+      });
+      setTarifaElectricidadInput({
+        potencia_p1: "",
+        potencia_p2: "",
+        energia_p1: "",
+        energia_p2: "",
+        energia_p3: "",
+        impuesto_electrico: "",
+        iva: "",
       });
     }
 
@@ -207,12 +261,22 @@ const AdminTariffs = () => {
   };
 
   const handleSaveElectricidad = async () => {
+    // Convert string inputs to numbers before saving
+    const dataToSave = {
+      id: tarifaElectricidad.id,
+      empresa_id: selectedEmpresaId,
+      potencia_p1: parseInputToNumber(tarifaElectricidadInput.potencia_p1),
+      potencia_p2: parseInputToNumber(tarifaElectricidadInput.potencia_p2),
+      energia_p1: parseInputToNumber(tarifaElectricidadInput.energia_p1),
+      energia_p2: parseInputToNumber(tarifaElectricidadInput.energia_p2),
+      energia_p3: parseInputToNumber(tarifaElectricidadInput.energia_p3),
+      impuesto_electrico: parseInputToNumber(tarifaElectricidadInput.impuesto_electrico),
+      iva: parseInputToNumber(tarifaElectricidadInput.iva),
+    };
+
     const { error } = await supabase
       .from("tarifas_electricidad")
-      .upsert({
-        ...tarifaElectricidad,
-        empresa_id: selectedEmpresaId,
-      });
+      .upsert(dataToSave);
 
     if (error) {
       toast({ title: "Error", description: "Error al guardar tarifa eléctrica", variant: "destructive" });
@@ -378,71 +442,78 @@ const AdminTariffs = () => {
                   <div>
                     <Label className="text-white">Potencia P1 (€/kW día)</Label>
                     <Input
-                      type="number"
-                      step="0.00001"
-                      value={tarifaElectricidad.potencia_p1 || ""}
-                      onChange={(e) => setTarifaElectricidad({ ...tarifaElectricidad, potencia_p1: parseFloat(e.target.value) || null })}
+                      type="text"
+                      inputMode="decimal"
+                      value={tarifaElectricidadInput.potencia_p1}
+                      onChange={(e) => setTarifaElectricidadInput({ ...tarifaElectricidadInput, potencia_p1: e.target.value })}
                       className="bg-[#00404A] text-white border-white/20"
+                      placeholder="0,00001"
                     />
                   </div>
                   <div>
                     <Label className="text-white">Potencia P2 (€/kW día)</Label>
                     <Input
-                      type="number"
-                      step="0.00001"
-                      value={tarifaElectricidad.potencia_p2 || ""}
-                      onChange={(e) => setTarifaElectricidad({ ...tarifaElectricidad, potencia_p2: parseFloat(e.target.value) || null })}
+                      type="text"
+                      inputMode="decimal"
+                      value={tarifaElectricidadInput.potencia_p2}
+                      onChange={(e) => setTarifaElectricidadInput({ ...tarifaElectricidadInput, potencia_p2: e.target.value })}
                       className="bg-[#00404A] text-white border-white/20"
+                      placeholder="0,00001"
                     />
                   </div>
                   <div>
                     <Label className="text-white">Energía P1 (€/kWh)</Label>
                     <Input
-                      type="number"
-                      step="0.00001"
-                      value={tarifaElectricidad.energia_p1 || ""}
-                      onChange={(e) => setTarifaElectricidad({ ...tarifaElectricidad, energia_p1: parseFloat(e.target.value) || null })}
+                      type="text"
+                      inputMode="decimal"
+                      value={tarifaElectricidadInput.energia_p1}
+                      onChange={(e) => setTarifaElectricidadInput({ ...tarifaElectricidadInput, energia_p1: e.target.value })}
                       className="bg-[#00404A] text-white border-white/20"
+                      placeholder="0,00001"
                     />
                   </div>
                   <div>
                     <Label className="text-white">Energía P2 (€/kWh)</Label>
                     <Input
-                      type="number"
-                      step="0.00001"
-                      value={tarifaElectricidad.energia_p2 || ""}
-                      onChange={(e) => setTarifaElectricidad({ ...tarifaElectricidad, energia_p2: parseFloat(e.target.value) || null })}
+                      type="text"
+                      inputMode="decimal"
+                      value={tarifaElectricidadInput.energia_p2}
+                      onChange={(e) => setTarifaElectricidadInput({ ...tarifaElectricidadInput, energia_p2: e.target.value })}
                       className="bg-[#00404A] text-white border-white/20"
+                      placeholder="0,00001"
                     />
                   </div>
                   <div>
                     <Label className="text-white">Energía P3 (€/kWh)</Label>
                     <Input
-                      type="number"
-                      step="0.00001"
-                      value={tarifaElectricidad.energia_p3 || ""}
-                      onChange={(e) => setTarifaElectricidad({ ...tarifaElectricidad, energia_p3: parseFloat(e.target.value) || null })}
+                      type="text"
+                      inputMode="decimal"
+                      value={tarifaElectricidadInput.energia_p3}
+                      onChange={(e) => setTarifaElectricidadInput({ ...tarifaElectricidadInput, energia_p3: e.target.value })}
                       className="bg-[#00404A] text-white border-white/20"
+                      placeholder="0,00001"
                     />
                   </div>
                   <div>
                     <Label className="text-white">Impuesto Eléctrico (%)</Label>
                     <Input
-                      type="number"
-                      step="0.01"
-                      value={tarifaElectricidad.impuesto_electrico || ""}
-                      onChange={(e) => setTarifaElectricidad({ ...tarifaElectricidad, impuesto_electrico: parseFloat(e.target.value) || null })}
+                      type="text"
+                      inputMode="decimal"
+                      value={tarifaElectricidadInput.impuesto_electrico}
+                      onChange={(e) => setTarifaElectricidadInput({ ...tarifaElectricidadInput, impuesto_electrico: e.target.value })}
                       className="bg-[#00404A] text-white border-white/20"
+                      placeholder="0,00"
                     />
                   </div>
                   <div>
                     <Label className="text-white">IVA (%)</Label>
                     <Input
-                      type="number"
-                      step="0.01"
-                      value={tarifaElectricidad.iva || ""}
-                      onChange={(e) => setTarifaElectricidad({ ...tarifaElectricidad, iva: parseFloat(e.target.value) || null })}
+                      type="text"
+                      inputMode="decimal"
+                      value={tarifaElectricidadInput.iva}
+                      onChange={(e) => setTarifaElectricidadInput({ ...tarifaElectricidadInput, iva: e.target.value })}
                       className="bg-[#00404A] text-white border-white/20"
+                      placeholder="0,00"
                     />
                   </div>
                 </div>
