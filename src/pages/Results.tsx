@@ -650,7 +650,7 @@ const Results = () => {
                 </p>
               </div>
               <div className="bg-white/5 rounded-lg p-3">
-                <p className="text-xs mb-1" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Con {currentCompany}</p>
+                <p className="text-xs mb-1" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Con {empresaComparacion}</p>
                 <p className="text-xl font-bold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
                   {formatCurrency(totalComparacion)} €
                 </p>
@@ -660,7 +660,7 @@ const Results = () => {
             {/* Breakdown */}
             <div className="space-y-2 text-sm border-t border-white/10 pt-3">
               <p className="font-medium mb-2" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                Desglose del cálculo ({currentCompany}):
+                Desglose del cálculo ({empresaComparacion}):
               </p>
               <div className="flex justify-between items-center">
                 <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Potencia:</span>
