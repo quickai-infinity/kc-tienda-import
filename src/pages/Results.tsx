@@ -207,13 +207,20 @@ const Results = () => {
               savingsYear: comparison.savingsYear
             });
 
-            if (comparison.savingsMonth > 0.01) {
+            // Check if tariff is incomplete (totalNew is null)
+            if (comparison.totalNew === null) {
+              console.warn('⚠️ Tarifa incompleta - potencia_p1 no configurada');
+              setSavingsPerMonth("0,00");
+              setSavingsPerYear("0,00");
+              setComparisonMessage("Tarifa incompleta. Configure potencia_p1 para esta empresa.");
+              setComparisonMessageType('neutral');
+            } else if (comparison.savingsMonth > 0.01) {
               // Positive savings
               setSavingsPerMonth(formatCurrency(comparison.savingsMonth));
               setSavingsPerYear(formatCurrency(comparison.savingsYear));
               setComparisonMessage(null);
               setComparisonMessageType('positive');
-            } else if (comparison.totalNew !== null && comparison.totalCurrent < comparison.totalNew) {
+            } else if (comparison.totalCurrent < comparison.totalNew) {
               // New tariff is more expensive
               setSavingsPerMonth("0,00");
               setSavingsPerYear("0,00");

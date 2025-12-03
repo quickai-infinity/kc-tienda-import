@@ -149,6 +149,12 @@ export const calculateNewElectricityCost = (
   data: ElectricityInvoiceData | SimpleElectricityData,
   adminTarifa: TarifaElectricidad
 ): number | null => {
+  // CRITICAL: If admin tariff doesn't have potencia_p1, tariff is INCOMPLETE
+  if (adminTarifa.potencia_p1 === null || adminTarifa.potencia_p1 === undefined) {
+    console.warn('⚠️ Admin tariff INCOMPLETE: potencia_p1 is null');
+    return null;
+  }
+  
   // If admin tariff doesn't have energy price, can't calculate
   if (!adminTarifa.energia_p1) {
     console.warn('⚠️ Admin tariff missing energia_p1');
@@ -162,9 +168,9 @@ export const calculateNewElectricityCost = (
   const consumo_p2 = data.consumo_p2_kwh || 0;
   const consumo_p3 = data.consumo_p3_kwh || 0;
 
-  // Admin tariff values ONLY
-  const adminPotenciaP1 = adminTarifa.potencia_p1 || 0;
-  const adminEnergiaP1 = adminTarifa.energia_p1 || 0;
+  // Admin tariff values ONLY - potencia_p1 is already validated above
+  const adminPotenciaP1 = adminTarifa.potencia_p1;
+  const adminEnergiaP1 = adminTarifa.energia_p1;
   const adminEnergiaP2 = adminTarifa.energia_p2 || 0;
   const adminEnergiaP3 = adminTarifa.energia_p3 || 0;
   const adminImpuesto = adminTarifa.impuesto_electrico || 5.1127;
