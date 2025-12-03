@@ -26,11 +26,25 @@ const Processing = () => {
   const location = useLocation();
   const { toast } = useToast();
   const { companyBranding } = useBranding();
-  const [items, setItems] = useState<ProcessingItem[]>([
+  
+  // Determine tariff type for displaying correct extraction items
+  const currentTariffType = location.state?.tariffType || localStorage.getItem('tariffType') || "electricity";
+  
+  const electricityItems: ProcessingItem[] = [
     { id: "consumo", label: "Consumo mensual", completed: false },
     { id: "tarifa", label: "Tarifa actual", completed: false },
     { id: "cups", label: "CUPS", completed: false },
-  ]);
+  ];
+  
+  const gasItems: ProcessingItem[] = [
+    { id: "consumo", label: "Consumo m³", completed: false },
+    { id: "termino", label: "Término fijo", completed: false },
+    { id: "atr", label: "Tarifa ATR", completed: false },
+  ];
+  
+  const [items, setItems] = useState<ProcessingItem[]>(
+    currentTariffType === "gas" ? gasItems : electricityItems
+  );
 
   // Check authentication
   useEffect(() => {
@@ -106,10 +120,11 @@ const Processing = () => {
         const selectedCompany = location.state?.selectedCompany || localStorage.getItem('selectedCompany') || "";
         const currentCompany = selectedCompany || extractedData.empresa || "";
 
-        // Update UI progressively
+        // Update UI progressively based on tariff type
+        const isGas = tariffType === "gas";
         setTimeout(() => updateItem("consumo"), 1000);
-        setTimeout(() => updateItem("tarifa"), 2000);
-        setTimeout(() => updateItem("cups"), 3000);
+        setTimeout(() => updateItem(isGas ? "termino" : "tarifa"), 2000);
+        setTimeout(() => updateItem(isGas ? "atr" : "cups"), 3000);
 
         // Save to database
         const { data: { user } } = await supabase.auth.getUser();
