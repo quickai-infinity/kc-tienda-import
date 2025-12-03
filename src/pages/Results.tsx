@@ -188,19 +188,28 @@ const Results = () => {
 
             const diferencia = comparison.diferencia;
 
-            // NEW LOGIC: Always show result, even if negative
-            if (diferencia >= 0.01) {
+            // CHECK: Is the invoice company the same as the selected company?
+            const empresaFactura = extractedData.empresa?.toLowerCase().trim();
+            const empresaSeleccionada = targetCompany.name?.toLowerCase().trim();
+            
+            if (empresaFactura && empresaSeleccionada && empresaFactura === empresaSeleccionada) {
+              // Same company - no comparison applies
+              setSavingsPerMonth("--");
+              setSavingsPerYear("--");
+              setComparisonMessage(`Tu factura actual ya pertenece a ${targetCompany.name}. No aplica comparación.`);
+              setComparisonMessageType('neutral');
+            } else if (diferencia >= 0.01) {
               // Positive savings
               setSavingsPerMonth(formatCurrency(diferencia));
               setSavingsPerYear(formatCurrency(diferencia * 12));
               setComparisonMessage(`Con ${targetCompany.name} ahorrarías ${formatCurrency(diferencia)} €/mes.`);
               setComparisonMessageType('positive');
             } else if (diferencia <= -0.01) {
-              // New tariff is more expensive - SHOW THE DIFFERENCE
+              // New tariff is more expensive
               const extraCost = Math.abs(diferencia);
               setSavingsPerMonth(`+${formatCurrency(extraCost)}`);
               setSavingsPerYear(`+${formatCurrency(extraCost * 12)}`);
-              setComparisonMessage(`Tu tarifa actual es más económica. Con ${targetCompany.name} pagarías ${formatCurrency(extraCost)} €/mes más.`);
+              setComparisonMessage(`Con ${targetCompany.name} pagarías ${formatCurrency(extraCost)} €/mes más.`);
               setComparisonMessageType('negative');
             } else {
               // No significant difference
@@ -234,7 +243,17 @@ const Results = () => {
 
           const monthlyDiff = precioActual - (cheapestCompany.pricePerMonth || 0);
 
-          if (monthlyDiff > 0.01) {
+          // CHECK: Is the invoice company the same as the cheapest company?
+          const empresaFacturaGas = extractedData.empresa?.toLowerCase().trim();
+          const empresaSeleccionadaGas = cheapestCompany.name?.toLowerCase().trim();
+
+          if (empresaFacturaGas && empresaSeleccionadaGas && empresaFacturaGas === empresaSeleccionadaGas) {
+            // Same company - no comparison applies
+            setSavingsPerMonth("--");
+            setSavingsPerYear("--");
+            setComparisonMessage(`Tu factura actual ya pertenece a ${cheapestCompany.name}. No aplica comparación.`);
+            setComparisonMessageType('neutral');
+          } else if (monthlyDiff > 0.01) {
             setSavingsPerMonth(formatCurrency(monthlyDiff));
             setSavingsPerYear(formatCurrency(monthlyDiff * 12));
             setComparisonMessage(`Con ${cheapestCompany.name} ahorrarías ${formatCurrency(monthlyDiff)} €/mes.`);
@@ -243,7 +262,7 @@ const Results = () => {
             const extraCost = Math.abs(monthlyDiff);
             setSavingsPerMonth(`+${formatCurrency(extraCost)}`);
             setSavingsPerYear(`+${formatCurrency(extraCost * 12)}`);
-            setComparisonMessage(`Tu tarifa actual es más económica. Con ${cheapestCompany.name} pagarías ${formatCurrency(extraCost)} €/mes más.`);
+            setComparisonMessage(`Con ${cheapestCompany.name} pagarías ${formatCurrency(extraCost)} €/mes más.`);
             setComparisonMessageType('negative');
           } else {
             setSavingsPerMonth("0,00");
