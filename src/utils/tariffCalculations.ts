@@ -18,7 +18,8 @@ interface TarifaGas {
 export interface ElectricityInvoiceData {
   days: number;
   potencia_kw: number;
-  potencia_price: number; // €/kW día
+  potencia_price: number; // €/kW día (may be unreliable)
+  termino_potencia_euros: number; // Subtotal from invoice "Término de potencia" - USE THIS
   consumo_p1_kwh: number;
   consumo_p2_kwh: number;
   consumo_p3_kwh: number;
@@ -93,13 +94,16 @@ export const calculateMonthlyGasPrice = (
 };
 
 /**
- * Calculate CURRENT cost using INVOICE prices
+ * Calculate CURRENT cost using INVOICE subtotals
+ * IMPORTANT: Use termino_potencia_euros directly, NOT potencia_kw * days * potencia_price
+ * because OCR may extract incorrect power price from "€/kW y año" format
  */
 export const calculateCurrentElectricityCost = (data: ElectricityInvoiceData): number => {
-  // Power cost from invoice
-  const powerCostCurrent = data.potencia_kw * data.days * data.potencia_price;
+  // Power cost: USE THE SUBTOTAL FROM INVOICE DIRECTLY (reliable)
+  // Do NOT calculate from potencia_kw * days * potencia_price (unreliable)
+  const powerCostCurrent = data.termino_potencia_euros;
 
-  // Energy cost from invoice
+  // Energy cost from invoice prices
   const energyCostCurrent =
     (data.consumo_p1_kwh * data.energia_p1_price) +
     (data.consumo_p2_kwh * data.energia_p2_price) +

@@ -78,10 +78,26 @@ const Results = () => {
       const displayCompany = currentCompany;
       
       // Build invoice data from extracted fields
+      // CRITICAL: Use termino_potencia_euros (power subtotal) directly from invoice
+      // because potencia_price may be incorrectly extracted from "€/kW y año" format
+      const days = parseFloat(extractedData.potencia_days) || 30;
+      const potencia_kw = parseFloat(extractedData.potencia_kw) || 4.6;
+      const potencia_price = parseFloat(extractedData.potencia_price) || 0;
+      
+      // Get the power subtotal - this is the RELIABLE value from invoice
+      // If not extracted, fall back to calculated value (less reliable)
+      let termino_potencia_euros = parseFloat(extractedData.termino_potencia_euros) || 0;
+      if (termino_potencia_euros === 0 && potencia_price > 0) {
+        // Fallback: calculate from components (may be unreliable if potencia_price is wrong)
+        termino_potencia_euros = potencia_kw * days * potencia_price;
+        console.warn('termino_potencia_euros not extracted, calculated from components:', termino_potencia_euros);
+      }
+      
       const invoiceData: ElectricityInvoiceData = {
-        days: parseFloat(extractedData.potencia_days) || 30,
-        potencia_kw: parseFloat(extractedData.potencia_kw) || 4.6,
-        potencia_price: parseFloat(extractedData.potencia_price) || 0,
+        days,
+        potencia_kw,
+        potencia_price, // May be unreliable
+        termino_potencia_euros, // USE THIS - power subtotal from invoice
         consumo_p1_kwh: parseFloat(extractedData.consumo_p1) || parseFloat(extractedData.consumo_kwh) || 0,
         consumo_p2_kwh: parseFloat(extractedData.consumo_p2) || 0,
         consumo_p3_kwh: parseFloat(extractedData.consumo_p3) || 0,
