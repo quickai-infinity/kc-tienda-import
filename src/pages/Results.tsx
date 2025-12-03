@@ -11,7 +11,7 @@ import { useBranding } from "@/contexts/BrandingContext";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Footer from "@/components/Footer";
-import { calculateMonthlyElectricityPrice, calculateMonthlyGasPrice, formatCurrency, compareElectricityTariffs, ElectricityInvoiceData } from "@/utils/tariffCalculations";
+import { calculateMonthlyElectricityPrice, calculateMonthlyGasPrice, formatCurrency, compareElectricityTariffs, SimpleElectricityData } from "@/utils/tariffCalculations";
 
 interface CompanyOption {
   id: string;
@@ -77,36 +77,32 @@ const Results = () => {
     const loadTariffsAndCalculate = async () => {
       const displayCompany = currentCompany;
       
-      // Build invoice data from extracted fields
-      // CRITICAL: Use termino_potencia_euros (power subtotal) directly from invoice
-      // NEVER calculate from potencia_price - it may be wrong (e.g., €/kW y año misread as €/kW día)
+      // SIMPLIFIED: Build invoice data for comparison
+      // CURRENT cost = precio_mensual (invoice total) - most reliable
+      // NEW cost = calculated using ONLY admin tariff values
+      
       const days = parseFloat(extractedData.potencia_days) || 30;
       const potencia_kw = parseFloat(extractedData.potencia_kw) || 4.6;
-      const potencia_price = parseFloat(extractedData.potencia_price) || 0;
+      const precioMensualFactura = parseFloat(extractedData.precio_mensual) || 0;
       
-      // Get the power subtotal - this is the ONLY reliable value
-      // If NOT extracted, use 0 (do NOT calculate from components - they are unreliable)
-      const termino_potencia_euros = parseFloat(extractedData.termino_potencia_euros) || 0;
-      if (termino_potencia_euros === 0) {
-        console.warn('⚠️ termino_potencia_euros not extracted from invoice, using 0 for power cost');
-      }
-      
-      const invoiceData: ElectricityInvoiceData = {
+      console.log('📋 Invoice data:', {
         days,
         potencia_kw,
-        potencia_price, // May be unreliable
-        termino_potencia_euros, // USE THIS - power subtotal from invoice
+        precioMensualFactura,
+        consumo: extractedData.consumo_p1 || extractedData.consumo_kwh
+      });
+      
+      // Simple data structure for comparison
+      const invoiceData: SimpleElectricityData = {
+        precio_mensual: precioMensualFactura,
+        potencia_kw,
+        days,
         consumo_p1_kwh: parseFloat(extractedData.consumo_p1) || parseFloat(extractedData.consumo_kwh) || 0,
         consumo_p2_kwh: parseFloat(extractedData.consumo_p2) || 0,
         consumo_p3_kwh: parseFloat(extractedData.consumo_p3) || 0,
-        energia_p1_price: parseFloat(extractedData.energia_p1_price) || 0,
-        energia_p2_price: parseFloat(extractedData.energia_p2_price) || 0,
-        energia_p3_price: parseFloat(extractedData.energia_p3_price) || 0,
-        impuesto_electrico_pct: parseFloat(extractedData.impuesto_electrico) || 5.1127,
-        iva_pct: parseFloat(extractedData.iva) || 21,
       };
 
-      console.log('Invoice data for comparison:', invoiceData);
+      console.log('📊 Invoice data for comparison:', invoiceData);
 
       // If no consumption data, can't compare
       if (invoiceData.consumo_p1_kwh === 0) {
@@ -138,9 +134,9 @@ const Results = () => {
               .eq("empresa_id", empresa.id)
               .single();
 
-            if (tarifaElec) {
+          if (tarifaElec) {
               // Calculate NEW cost using admin tariff with invoice consumption
-              const comparison = compareElectricityTariffs(invoiceData, tarifaElec);
+              const comparison = compareElectricityTariffs(invoiceData, tarifaElec, precioMensualFactura);
               calculatedPrice = comparison.totalNew;
             }
           } else {
@@ -201,9 +197,10 @@ const Results = () => {
             .single();
 
           if (adminTarifa) {
-            const comparison = compareElectricityTariffs(invoiceData, adminTarifa);
+            // Pass precio_mensual directly to use invoice total as CURRENT cost
+            const comparison = compareElectricityTariffs(invoiceData, adminTarifa, precioMensualFactura);
             
-            console.log('Electricity comparison result:', {
+            console.log('📊 Electricity comparison result:', {
               totalCurrent: comparison.totalCurrent,
               totalNew: comparison.totalNew,
               savingsMonth: comparison.savingsMonth,

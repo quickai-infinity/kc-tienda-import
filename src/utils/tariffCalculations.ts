@@ -93,88 +93,162 @@ export const calculateMonthlyGasPrice = (
   return subtotal;
 };
 
+// Invoice extracted data for electricity comparison - SIMPLIFIED
+export interface SimpleElectricityData {
+  precio_mensual: number;      // Invoice total - USE THIS AS CURRENT COST
+  potencia_kw: number;         // For new tariff calculation
+  days: number;                // For new tariff calculation  
+  consumo_p1_kwh: number;      // For new tariff calculation
+  consumo_p2_kwh: number;      // Optional
+  consumo_p3_kwh: number;      // Optional
+}
+
 /**
- * Calculate CURRENT cost using INVOICE subtotals
- * IMPORTANT: Use termino_potencia_euros directly, NOT potencia_kw * days * potencia_price
- * because OCR may extract incorrect power price from "€/kW y año" format
+ * SIMPLIFIED: Calculate CURRENT cost = invoice total (precio_mensual)
+ * DO NOT recalculate from extracted prices - they are unreliable
  */
-export const calculateCurrentElectricityCost = (data: ElectricityInvoiceData): number => {
-  // Power cost: USE THE SUBTOTAL FROM INVOICE DIRECTLY (reliable)
-  // Do NOT calculate from potencia_kw * days * potencia_price (unreliable)
-  const powerCostCurrent = data.termino_potencia_euros;
+export const calculateCurrentElectricityCost = (data: ElectricityInvoiceData | SimpleElectricityData): number => {
+  // If we have precio_mensual, use it directly (most reliable)
+  if ('precio_mensual' in data && data.precio_mensual > 0) {
+    console.log('✅ Using precio_mensual directly:', data.precio_mensual);
+    return data.precio_mensual;
+  }
+  
+  // Fallback: calculate from invoice components (less reliable)
+  const fullData = data as ElectricityInvoiceData;
+  const powerCostCurrent = fullData.termino_potencia_euros || 0;
   
   if (powerCostCurrent === 0) {
     console.warn('⚠️ Power subtotal (termino_potencia_euros) is 0 - current power cost will be 0');
   }
 
-  // Energy cost from invoice prices
   const energyCostCurrent =
-    (data.consumo_p1_kwh * data.energia_p1_price) +
-    (data.consumo_p2_kwh * data.energia_p2_price) +
-    (data.consumo_p3_kwh * data.energia_p3_price);
+    (fullData.consumo_p1_kwh * fullData.energia_p1_price) +
+    (fullData.consumo_p2_kwh * fullData.energia_p2_price) +
+    (fullData.consumo_p3_kwh * fullData.energia_p3_price);
 
   const subtotalCurrent = powerCostCurrent + energyCostCurrent;
-
-  // Apply taxes
-  const taxFactor = 1 + (data.impuesto_electrico_pct / 100);
-  const vatFactor = 1 + (data.iva_pct / 100);
+  const taxFactor = 1 + (fullData.impuesto_electrico_pct / 100);
+  const vatFactor = 1 + (fullData.iva_pct / 100);
 
   return subtotalCurrent * taxFactor * vatFactor;
 };
 
 /**
- * Calculate NEW cost using ADMIN TARIFF prices with same consumption/power from invoice
+ * Calculate NEW cost using ADMIN TARIFF prices ONLY
+ * Uses invoice consumption data (kW, days, kWh) with admin tariff prices
+ * 
+ * Formula:
+ * potencia_cost = potencia_kw × days × potencia_p1_admin
+ * energia_cost = consumo_p1 × energia_p1_admin (+ P2/P3 if applicable)
+ * subtotal = potencia_cost + energia_cost
+ * impuesto = subtotal × (impuesto_electrico_admin / 100)
+ * total = (subtotal + impuesto) × (1 + iva_admin / 100)
  */
 export const calculateNewElectricityCost = (
-  data: ElectricityInvoiceData,
+  data: ElectricityInvoiceData | SimpleElectricityData,
   adminTarifa: TarifaElectricidad
 ): number | null => {
   // If admin tariff doesn't have energy price, can't calculate
   if (!adminTarifa.energia_p1) {
+    console.warn('⚠️ Admin tariff missing energia_p1');
     return null;
   }
 
-  // Power cost using admin tariff P1
-  const adminPotenciaP1 = adminTarifa.potencia_p1 || 0;
-  const powerCostNew = data.potencia_kw * data.days * adminPotenciaP1;
+  // Extract consumption data
+  const potencia_kw = data.potencia_kw || 4.6;
+  const days = data.days || 30;
+  const consumo_p1 = data.consumo_p1_kwh || 0;
+  const consumo_p2 = data.consumo_p2_kwh || 0;
+  const consumo_p3 = data.consumo_p3_kwh || 0;
 
-  // Energy cost using admin tariff prices
+  // Admin tariff values ONLY
+  const adminPotenciaP1 = adminTarifa.potencia_p1 || 0;
   const adminEnergiaP1 = adminTarifa.energia_p1 || 0;
   const adminEnergiaP2 = adminTarifa.energia_p2 || 0;
   const adminEnergiaP3 = adminTarifa.energia_p3 || 0;
+  const adminImpuesto = adminTarifa.impuesto_electrico || 5.1127;
+  const adminIva = adminTarifa.iva || 21;
 
-  const energyCostNew =
-    (data.consumo_p1_kwh * adminEnergiaP1) +
-    (data.consumo_p2_kwh * adminEnergiaP2) +
-    (data.consumo_p3_kwh * adminEnergiaP3);
+  // Step 1: Power cost
+  const potencia_cost = potencia_kw * days * adminPotenciaP1;
+  
+  // Step 2: Energy cost (use P1 price for all if P2/P3 not configured)
+  const energia_cost = 
+    (consumo_p1 * adminEnergiaP1) +
+    (consumo_p2 * (adminEnergiaP2 || adminEnergiaP1)) +
+    (consumo_p3 * (adminEnergiaP3 || adminEnergiaP1));
+  
+  // Step 3: Subtotal
+  const subtotal = potencia_cost + energia_cost;
+  
+  // Step 4: Impuesto eléctrico
+  const impuesto = subtotal * (adminImpuesto / 100);
+  
+  // Step 5: Subtotal + impuesto
+  const subtotal_with_impuesto = subtotal + impuesto;
+  
+  // Step 6: IVA
+  const total_new = subtotal_with_impuesto * (1 + adminIva / 100);
 
-  const subtotalNew = powerCostNew + energyCostNew;
+  console.log('📊 NEW tariff calculation:', {
+    potencia_kw,
+    days,
+    consumo_p1,
+    adminPotenciaP1,
+    adminEnergiaP1,
+    potencia_cost: potencia_cost.toFixed(2),
+    energia_cost: energia_cost.toFixed(2),
+    subtotal: subtotal.toFixed(2),
+    impuesto: impuesto.toFixed(2),
+    subtotal_with_impuesto: subtotal_with_impuesto.toFixed(2),
+    total_new: total_new.toFixed(2)
+  });
 
-  // Apply admin taxes
-  const adminImpuesto = adminTarifa.impuesto_electrico || 5.1127; // default 5.1127%
-  const adminIva = adminTarifa.iva || 21; // default 21%
-
-  const taxFactorNew = 1 + (adminImpuesto / 100);
-  const vatFactorNew = 1 + (adminIva / 100);
-
-  return subtotalNew * taxFactorNew * vatFactorNew;
+  return total_new;
 };
 
 /**
- * Compare electricity invoice with admin tariff and return savings
+ * Compare electricity: CURRENT (invoice total) vs NEW (admin tariff calculation)
+ * 
+ * CURRENT = precio_mensual from invoice (direct total)
+ * NEW = calculated using ONLY admin tariff values
+ * SAVINGS = CURRENT - NEW
  */
 export const compareElectricityTariffs = (
-  invoiceData: ElectricityInvoiceData,
-  adminTarifa: TarifaElectricidad
+  invoiceData: ElectricityInvoiceData | SimpleElectricityData,
+  adminTarifa: TarifaElectricidad,
+  precioMensualFactura?: number
 ): { savingsMonth: number; savingsYear: number; totalCurrent: number; totalNew: number | null } => {
-  const totalCurrent = calculateCurrentElectricityCost(invoiceData);
+  
+  // CURRENT: Use invoice total (precio_mensual) directly
+  let totalCurrent: number;
+  if (precioMensualFactura && precioMensualFactura > 0) {
+    totalCurrent = precioMensualFactura;
+    console.log('✅ Using precio_mensual from invoice:', totalCurrent);
+  } else {
+    totalCurrent = calculateCurrentElectricityCost(invoiceData);
+    console.log('⚠️ Calculated current cost (fallback):', totalCurrent);
+  }
+  
+  // NEW: Calculate using admin tariff ONLY
   const totalNew = calculateNewElectricityCost(invoiceData, adminTarifa);
+
+  console.log('📈 Comparison:', {
+    totalCurrent: totalCurrent.toFixed(2),
+    totalNew: totalNew?.toFixed(2) || 'N/A'
+  });
 
   if (totalNew === null) {
     return { savingsMonth: 0, savingsYear: 0, totalCurrent, totalNew: null };
   }
 
   const savingsMonth = totalCurrent - totalNew;
+
+  console.log('💰 Savings calculation:', {
+    savingsMonth: savingsMonth.toFixed(2),
+    savingsYear: (savingsMonth * 12).toFixed(2)
+  });
 
   // Treat very small differences as zero (floating point noise)
   if (savingsMonth > 0.01) {
