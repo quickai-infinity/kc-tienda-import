@@ -246,10 +246,19 @@ const Results = () => {
       
       doc.setFontSize(11);
       doc.text(`Empresa de tu factura: ${currentCompany || 'N/A'}`, 20, 80);
-      doc.text(`Tarifa actual: ${extractedData.tarifa || 'N/A'}`, 20, 96);
-      doc.text(`Consumo mensual: ${extractedData.consumo_kwh || 'N/A'} kWh`, 20, 104);
-      doc.text(`Precio mensual estimado: ${extractedData.precio_mensual || 'N/A'} €`, 20, 112);
-      doc.text(`CUPS: ${extractedData.cups || 'N/A'}`, 20, 120);
+      
+      if (tariffType === "gas") {
+        doc.text(`Tarifa ATR: ${extractedData.tarifa_atr || 'N/A'}`, 20, 88);
+        doc.text(`Consumo: ${extractedData.consumo_m3 || 'N/A'} m³ (${extractedData.consumo_kwh || 'N/A'} kWh)`, 20, 96);
+        doc.text(`Término fijo: ${extractedData.termino_fijo || 'N/A'} €/mes`, 20, 104);
+        doc.text(`Término variable: ${extractedData.termino_variable || 'N/A'} €/kWh`, 20, 112);
+        doc.text(`Precio mensual: ${extractedData.precio_mensual || 'N/A'} €`, 20, 120);
+      } else {
+        doc.text(`Tarifa actual: ${extractedData.tarifa || 'N/A'}`, 20, 96);
+        doc.text(`Consumo mensual: ${extractedData.consumo_kwh || 'N/A'} kWh`, 20, 104);
+        doc.text(`Precio mensual estimado: ${extractedData.precio_mensual || 'N/A'} €`, 20, 112);
+        doc.text(`CUPS: ${extractedData.cups || 'N/A'}`, 20, 120);
+      }
       
       // Savings section
       doc.setFontSize(16);
@@ -342,22 +351,54 @@ const Results = () => {
               <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Empresa de tu factura:</span>
               <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{currentCompany || 'N/A'}</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Tarifa actual:</span>
-              <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.tarifa || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Consumo mensual:</span>
-              <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.consumo_kwh || 'N/A'} kWh</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Precio mensual:</span>
-              <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.precio_mensual || 'N/A'} €</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>CUPS:</span>
-              <span className="font-semibold text-sm" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.cups || 'N/A'}</span>
-            </div>
+            
+            {tariffType === "gas" ? (
+              <>
+                <div className="flex justify-between items-center">
+                  <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Tarifa ATR:</span>
+                  <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.tarifa_atr || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Consumo m³:</span>
+                  <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.consumo_m3 || 'N/A'} m³</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Consumo kWh:</span>
+                  <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.consumo_kwh || 'N/A'} kWh</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Término fijo:</span>
+                  <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.termino_fijo || 'N/A'} €/mes</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Término variable:</span>
+                  <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.termino_variable || 'N/A'} €/kWh</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Precio mensual:</span>
+                  <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.precio_mensual || 'N/A'} €</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between items-center">
+                  <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Tarifa actual:</span>
+                  <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.tarifa || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Consumo mensual:</span>
+                  <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.consumo_kwh || 'N/A'} kWh</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>Precio mensual:</span>
+                  <span className="font-semibold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.precio_mensual || 'N/A'} €</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)' }}>CUPS:</span>
+                  <span className="font-semibold text-sm" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>{extractedData.cups || 'N/A'}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
