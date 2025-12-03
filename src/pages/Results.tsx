@@ -126,10 +126,8 @@ const Results = () => {
               .single();
 
             if (tarifaGas) {
-              calculatedPrice = calculateMonthlyGasPrice(
-                invoiceData.consumo_p1_kwh + invoiceData.consumo_p2_kwh + invoiceData.consumo_p3_kwh,
-                tarifaGas
-              );
+              const totalConsumo = (ocrData.consumo_p1_kwh || 0) + (ocrData.consumo_p2_kwh || 0) + (ocrData.consumo_p3_kwh || 0);
+              calculatedPrice = calculateMonthlyGasPrice(totalConsumo, tarifaGas);
             }
           }
 
