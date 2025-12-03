@@ -172,6 +172,8 @@ const Processing = () => {
               extractedData,
               currentCompany,
               tariffType,
+              detectedFields: result.detectedFields || [],
+              fallbacksApplied: result.fallbacksApplied || [],
             } 
           });
         }, 4000);

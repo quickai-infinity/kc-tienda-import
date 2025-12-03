@@ -65,6 +65,12 @@ const Results = () => {
   const [savingsPerMonth, setSavingsPerMonth] = useState<string>("0,00");
   const [savingsPerYear, setSavingsPerYear] = useState<string>("0,00");
   const [loading, setLoading] = useState(true);
+  const [comparisonMessage, setComparisonMessage] = useState<string | null>(null);
+  const [comparisonMessageType, setComparisonMessageType] = useState<'positive' | 'neutral' | 'negative'>('positive');
+  
+  // Explainability data
+  const detectedFields = location.state?.detectedFields || [];
+  const fallbacksApplied = location.state?.fallbacksApplied || [];
 
   // Load tariffs and calculate prices
   useEffect(() => {
@@ -170,17 +176,31 @@ const Results = () => {
           monthlyDiff
         });
 
-        // Solo mostrar ahorros positivos (cuando cambiar sería más barato)
-        if (monthlyDiff > 0) {
+        // Comparison messages based on savings
+        if (monthlyDiff > 0.01) {
+          // Positive savings
           setSavingsPerMonth(formatCurrency(monthlyDiff));
           setSavingsPerYear(formatCurrency(monthlyDiff * 12));
-        } else {
+          setComparisonMessage(null);
+          setComparisonMessageType('positive');
+        } else if (Math.abs(monthlyDiff) < 0.01) {
+          // No savings (prices are equal)
           setSavingsPerMonth("0,00");
           setSavingsPerYear("0,00");
+          setComparisonMessage("No hay ahorro con esta tarifa.");
+          setComparisonMessageType('neutral');
+        } else {
+          // Negative savings (current is cheaper)
+          setSavingsPerMonth("0,00");
+          setSavingsPerYear("0,00");
+          setComparisonMessage("La tarifa comparada es más cara. Cambio no recomendado.");
+          setComparisonMessageType('negative');
         }
       } else {
         setSavingsPerMonth("0,00");
         setSavingsPerYear("0,00");
+        setComparisonMessage("No hay datos de tarifa disponibles para comparar.");
+        setComparisonMessageType('neutral');
       }
 
       setLoading(false);
@@ -484,20 +504,80 @@ const Results = () => {
           <h2 className="text-xl md:text-2xl font-bold" style={{
             color: companyBranding?.text_color || '#FFFFFF'
           }}>
-            Podrías ahorrar:
+            {comparisonMessage ? 'Resultado de la comparación:' : 'Podrías ahorrar:'}
           </h2>
           
-          <div className="space-y-2">
-            <div className="text-5xl md:text-6xl font-bold text-[#0A8754]">
-              {savingsPerMonth} €/mes
+          {comparisonMessage ? (
+            <div className={`p-4 rounded-xl ${
+              comparisonMessageType === 'negative' 
+                ? 'bg-red-500/20 border border-red-400/30' 
+                : 'bg-yellow-500/20 border border-yellow-400/30'
+            }`}>
+              <p className={`text-lg font-semibold ${
+                comparisonMessageType === 'negative' ? 'text-red-300' : 'text-yellow-300'
+              }`}>
+                {comparisonMessage}
+              </p>
             </div>
-            <div className="text-xl md:text-2xl font-medium" style={{
-              color: companyBranding?.text_color ? `${companyBranding.text_color}CC` : 'rgba(255, 255, 255, 0.8)'
-            }}>
-              {savingsPerYear} €/año
+          ) : (
+            <div className="space-y-2">
+              <div className="text-5xl md:text-6xl font-bold text-[#0A8754]">
+                {savingsPerMonth} €/mes
+              </div>
+              <div className="text-xl md:text-2xl font-medium" style={{
+                color: companyBranding?.text_color ? `${companyBranding.text_color}CC` : 'rgba(255, 255, 255, 0.8)'
+              }}>
+                {savingsPerYear} €/año
+              </div>
             </div>
-          </div>
+          )}
         </div>
+
+        {/* Explainability Section */}
+        {(detectedFields.length > 0 || fallbacksApplied.length > 0) && (
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-5 space-y-4 shadow-lg border border-white/10">
+            <h3 className="text-lg font-semibold" style={{
+              color: companyBranding?.text_color || '#FFFFFF'
+            }}>
+              Resumen del cálculo
+            </h3>
+            
+            {detectedFields.length > 0 && (
+              <div>
+                <p className="text-sm font-medium mb-2" style={{
+                  color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)'
+                }}>
+                  Datos detectados:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {detectedFields.map((field: string, index: number) => (
+                    <span key={index} className="px-2 py-1 bg-green-500/20 text-green-300 rounded text-xs">
+                      {field.replace(/_/g, ' ')}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {fallbacksApplied.length > 0 && (
+              <div>
+                <p className="text-sm font-medium mb-2" style={{
+                  color: companyBranding?.text_color ? `${companyBranding.text_color}B3` : 'rgba(255, 255, 255, 0.7)'
+                }}>
+                  Datos estimados (fallback):
+                </p>
+                <ul className="space-y-1">
+                  {fallbacksApplied.map((fallback: string, index: number) => (
+                    <li key={index} className="text-xs text-yellow-300/90 flex items-start gap-2">
+                      <span className="text-yellow-400">•</span>
+                      {fallback}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Additional Info */}
         <div className="text-center text-sm mt-8" style={{
