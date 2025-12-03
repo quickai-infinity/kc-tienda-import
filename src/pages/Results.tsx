@@ -11,7 +11,7 @@ import { useBranding } from "@/contexts/BrandingContext";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Footer from "@/components/Footer";
-import { calculateMonthlyElectricityPrice, calculateMonthlyGasPrice, formatCurrency, compareElectricityTariffs, SimpleElectricityData } from "@/utils/tariffCalculations";
+import { calculateMonthlyElectricityPrice, calculateMonthlyGasPrice, formatCurrency, compareElectricityTariffs, convertToOCRFormat } from "@/utils/tariffCalculations";
 
 interface CompanyOption {
   id: string;
@@ -77,35 +77,13 @@ const Results = () => {
     const loadTariffsAndCalculate = async () => {
       const displayCompany = currentCompany;
       
-      // SIMPLIFIED: Build invoice data for comparison
-      // CURRENT cost = precio_mensual (invoice total) - most reliable
-      // NEW cost = calculated using ONLY admin tariff values
-      
-      const days = parseFloat(extractedData.potencia_days) || 30;
-      const potencia_kw = parseFloat(extractedData.potencia_kw) || 4.6;
-      const precioMensualFactura = parseFloat(extractedData.precio_mensual) || 0;
-      
-      console.log('📋 Invoice data:', {
-        days,
-        potencia_kw,
-        precioMensualFactura,
-        consumo: extractedData.consumo_p1 || extractedData.consumo_kwh
-      });
-      
-      // Simple data structure for comparison
-      const invoiceData: SimpleElectricityData = {
-        precio_mensual: precioMensualFactura,
-        potencia_kw,
-        days,
-        consumo_p1_kwh: parseFloat(extractedData.consumo_p1) || parseFloat(extractedData.consumo_kwh) || 0,
-        consumo_p2_kwh: parseFloat(extractedData.consumo_p2) || 0,
-        consumo_p3_kwh: parseFloat(extractedData.consumo_p3) || 0,
-      };
+      // Convert extracted data to OCR format for comparison
+      const ocrData = convertToOCRFormat(extractedData);
 
-      console.log('📊 Invoice data for comparison:', invoiceData);
+      console.log('📊 OCR data for comparison:', ocrData);
 
       // If no consumption data, can't compare
-      if (invoiceData.consumo_p1_kwh === 0) {
+      if ((ocrData.consumo_p1_kwh ?? 0) === 0) {
         setLoading(false);
         setSavingsPerMonth("0,00");
         setSavingsPerYear("0,00");
@@ -135,8 +113,9 @@ const Results = () => {
               .single();
 
           if (tarifaElec) {
-              // Calculate NEW cost using admin tariff with invoice consumption
-              const comparison = compareElectricityTariffs(invoiceData, tarifaElec, precioMensualFactura);
+              // Convert extracted data to OCR format and compare
+              const ocrData = convertToOCRFormat(extractedData);
+              const comparison = compareElectricityTariffs(ocrData, tarifaElec);
               calculatedPrice = comparison.totalNew;
             }
           } else {
@@ -197,8 +176,9 @@ const Results = () => {
             .single();
 
           if (adminTarifa) {
-            // Pass precio_mensual directly to use invoice total as CURRENT cost
-            const comparison = compareElectricityTariffs(invoiceData, adminTarifa, precioMensualFactura);
+            // Convert extracted data to OCR format and compare
+            const ocrData = convertToOCRFormat(extractedData);
+            const comparison = compareElectricityTariffs(ocrData, adminTarifa);
             
             console.log('📊 Electricity comparison result:', {
               totalCurrent: comparison.totalCurrent,
