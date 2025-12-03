@@ -1,12 +1,12 @@
 /**
- * ELECTRICITY TARIFF COMPARISON SYSTEM
- * =====================================
+ * ELECTRICITY TARIFF COMPARISON SYSTEM - V2
+ * ==========================================
  * 
- * PRINCIPLE: NEVER mix OCR values with Admin tariff values
- * - CURRENT cost: Uses ONLY OCR-extracted values from customer invoice
- * - NEW cost: Uses ONLY admin-configured tariff values
- * - If ANY required value is null → keep as null, NEVER convert to 0
- * - If admin tariff is incomplete → return null, show error message
+ * NEW PRINCIPLE: NEVER BLOCK CALCULATIONS
+ * - Use ONLY available data from invoice and admin tariff
+ * - Skip missing fields (log them, but don't block)
+ * - Support negative savings (new tariff more expensive)
+ * - potencia_p1 is stored as €/kW/AÑO → convert to €/kW/día (divide by 365)
  */
 
 // ============================================
@@ -47,7 +47,19 @@ export interface OCRElectricityData {
   iva_pct: number | null;
 }
 
-// Calculation breakdown for transparency
+// Detailed calculation breakdown
+export interface CalculationDetail {
+  potencia: number;
+  energia_p1: number;
+  energia_p2: number;
+  energia_p3: number;
+  subtotal: number;
+  impuesto: number;
+  iva: number;
+  total: number;
+}
+
+// Legacy breakdown for compatibility
 export interface CalculationBreakdown {
   potencia_cost: number;
   energia_cost: number;
@@ -58,7 +70,19 @@ export interface CalculationBreakdown {
   total: number;
 }
 
-// Comparison result
+// New comparison result with detailed breakdown
+export interface DetailedComparisonResult {
+  totalActual: number;
+  totalComparacion: number;
+  diferencia: number;
+  empresaNombre: string;
+  mensaje: string;
+  detalle: CalculationDetail;
+  missingAdminFields: string[];
+  missingOcrFields: string[];
+}
+
+// Legacy comparison result
 export interface ComparisonResult {
   totalCurrent: number | null;
   totalNew: number | null;
@@ -69,6 +93,9 @@ export interface ComparisonResult {
   currentIncomplete: boolean;
   newIncomplete: boolean;
   incompleteReason: string | null;
+  // NEW: Detailed breakdown for transparency
+  detalle?: CalculationDetail;
+  missingAdminFields?: string[];
 }
 
 // ============================================
@@ -80,7 +107,203 @@ export const formatCurrency = (value: number): string => {
 };
 
 // ============================================
-// CURRENT BILL CALCULATION (OCR VALUES ONLY)
+// NEW: DYNAMIC ELECTRICITY COMPARISON
+// NEVER BLOCKS - Always returns a result
+// ============================================
+
+export const calculateElectricityComparison = (
+  ocrData: OCRElectricityData,
+  adminTarifa: TarifaElectricidad,
+  empresaNombre: string = "Empresa"
+): DetailedComparisonResult => {
+  
+  console.log('═══════════════════════════════════════');
+  console.log('🔄 ELECTRICITY COMPARISON V2 START');
+  console.log('OCR Data:', ocrData);
+  console.log('Admin Tarifa:', adminTarifa);
+  
+  const missingAdminFields: string[] = [];
+  const missingOcrFields: string[] = [];
+
+  // Track missing admin fields (for logging only - don't block)
+  if (adminTarifa.potencia_p1 === null || adminTarifa.potencia_p1 === undefined) {
+    missingAdminFields.push('potencia_p1');
+  }
+  if (adminTarifa.energia_p1 === null || adminTarifa.energia_p1 === undefined) {
+    missingAdminFields.push('energia_p1');
+  }
+  if (adminTarifa.energia_p2 === null || adminTarifa.energia_p2 === undefined) {
+    missingAdminFields.push('energia_p2');
+  }
+  if (adminTarifa.energia_p3 === null || adminTarifa.energia_p3 === undefined) {
+    missingAdminFields.push('energia_p3');
+  }
+  if (adminTarifa.impuesto_electrico === null || adminTarifa.impuesto_electrico === undefined) {
+    missingAdminFields.push('impuesto_electrico');
+  }
+  if (adminTarifa.iva === null || adminTarifa.iva === undefined) {
+    missingAdminFields.push('iva');
+  }
+
+  // Track missing OCR fields
+  if (!ocrData.dias) missingOcrFields.push('dias');
+  if (!ocrData.potencia_kw) missingOcrFields.push('potencia_kw');
+  if (!ocrData.consumo_p1_kwh) missingOcrFields.push('consumo_p1');
+
+  console.log("Missing admin tariff values:", missingAdminFields);
+  console.log("Missing OCR values:", missingOcrFields);
+
+  // ============================================
+  // STEP 1: Calculate CURRENT cost (from invoice)
+  // ============================================
+  let totalActual = 0;
+
+  // Priority: use precio_mensual directly if available
+  if (ocrData.precio_mensual !== null && ocrData.precio_mensual > 0) {
+    totalActual = ocrData.precio_mensual;
+    console.log('✅ CURRENT: Using precio_mensual directly:', totalActual);
+  } else {
+    // Calculate from components using invoice prices
+    const dias = ocrData.dias ?? 30;
+    const potenciaKw = ocrData.potencia_kw ?? 4.6;
+    
+    // Power cost from invoice
+    let potenciaCostActual = 0;
+    if (ocrData.termino_potencia_euros !== null && ocrData.termino_potencia_euros > 0) {
+      potenciaCostActual = ocrData.termino_potencia_euros;
+    } else if (ocrData.potencia_price_eur_kw_dia !== null) {
+      potenciaCostActual = ocrData.potencia_price_eur_kw_dia * potenciaKw * dias;
+    }
+    
+    // Energy cost from invoice
+    let energiaCostActual = 0;
+    if (ocrData.termino_energia_euros !== null && ocrData.termino_energia_euros > 0) {
+      energiaCostActual = ocrData.termino_energia_euros;
+    } else {
+      if (ocrData.consumo_p1_kwh && ocrData.energia_p1_price) {
+        energiaCostActual += ocrData.consumo_p1_kwh * ocrData.energia_p1_price;
+      }
+      if (ocrData.consumo_p2_kwh && ocrData.energia_p2_price) {
+        energiaCostActual += ocrData.consumo_p2_kwh * ocrData.energia_p2_price;
+      }
+      if (ocrData.consumo_p3_kwh && ocrData.energia_p3_price) {
+        energiaCostActual += ocrData.consumo_p3_kwh * ocrData.energia_p3_price;
+      }
+    }
+    
+    const subtotalActual = potenciaCostActual + energiaCostActual;
+    const impuestoPctActual = ocrData.impuesto_electrico_pct ?? 5.1127;
+    const impuestoActual = subtotalActual * (impuestoPctActual / 100);
+    const subtotalConImpuestoActual = subtotalActual + impuestoActual;
+    const ivaPctActual = ocrData.iva_pct ?? 21;
+    const ivaActual = subtotalConImpuestoActual * (ivaPctActual / 100);
+    totalActual = subtotalConImpuestoActual + ivaActual;
+    
+    console.log('📊 CURRENT calculated from components:', totalActual);
+  }
+
+  // ============================================
+  // STEP 2: Calculate NEW cost (from admin tariff)
+  // Use ONLY available values - skip missing ones
+  // ============================================
+  const dias = ocrData.dias ?? 30;
+  const potenciaKw = ocrData.potencia_kw ?? 4.6;
+  const consumoP1 = ocrData.consumo_p1_kwh ?? 0;
+  const consumoP2 = ocrData.consumo_p2_kwh ?? 0;
+  const consumoP3 = ocrData.consumo_p3_kwh ?? 0;
+
+  // CRITICAL FIX: potencia_p1 is stored as €/kW/AÑO (year), NOT daily
+  // Must convert to €/kW/día by dividing by 365
+  let precioPotenciaDiario = 0;
+  if (adminTarifa.potencia_p1 !== null && adminTarifa.potencia_p1 !== undefined) {
+    precioPotenciaDiario = adminTarifa.potencia_p1 / 365;
+  }
+  
+  const totalPotencia = potenciaKw * dias * precioPotenciaDiario;
+
+  // Energy costs - use only periods that have consumption
+  let totalP1 = 0;
+  let totalP2 = 0;
+  let totalP3 = 0;
+
+  if (consumoP1 > 0 && adminTarifa.energia_p1 !== null && adminTarifa.energia_p1 !== undefined) {
+    totalP1 = consumoP1 * adminTarifa.energia_p1;
+  }
+  
+  // Only calculate P2 if invoice has P2 consumption
+  if (consumoP2 > 0) {
+    if (adminTarifa.energia_p2 !== null && adminTarifa.energia_p2 !== undefined) {
+      totalP2 = consumoP2 * adminTarifa.energia_p2;
+    } else if (adminTarifa.energia_p1 !== null) {
+      // Fallback to P1 price if P2 not configured
+      totalP2 = consumoP2 * adminTarifa.energia_p1;
+    }
+  }
+  
+  // Only calculate P3 if invoice has P3 consumption
+  if (consumoP3 > 0) {
+    if (adminTarifa.energia_p3 !== null && adminTarifa.energia_p3 !== undefined) {
+      totalP3 = consumoP3 * adminTarifa.energia_p3;
+    } else if (adminTarifa.energia_p1 !== null) {
+      // Fallback to P1 price if P3 not configured
+      totalP3 = consumoP3 * adminTarifa.energia_p1;
+    }
+  }
+
+  const totalEnergia = totalP1 + totalP2 + totalP3;
+  const subtotal = totalPotencia + totalEnergia;
+
+  // Taxes - use admin values or defaults
+  const impuestoPct = adminTarifa.impuesto_electrico ?? 5.1127;
+  const impuestoElectricidad = subtotal * (impuestoPct / 100);
+  const subtotalConImpuesto = subtotal + impuestoElectricidad;
+  
+  const ivaPct = adminTarifa.iva ?? 21;
+  const totalIVA = subtotalConImpuesto * (ivaPct / 100);
+  
+  const totalComparacion = subtotalConImpuesto + totalIVA;
+
+  // ============================================
+  // STEP 3: Calculate difference and message
+  // ============================================
+  const diferencia = totalActual - totalComparacion;
+
+  let mensaje = "";
+  if (diferencia >= 0) {
+    mensaje = `Con ${empresaNombre} ahorrarías ${diferencia.toFixed(2)} €/mes.`;
+  } else {
+    mensaje = `Tu tarifa actual es más económica. Con ${empresaNombre} pagarías ${Math.abs(diferencia).toFixed(2)} €/mes más.`;
+  }
+
+  const detalle: CalculationDetail = {
+    potencia: totalPotencia,
+    energia_p1: totalP1,
+    energia_p2: totalP2,
+    energia_p3: totalP3,
+    subtotal,
+    impuesto: impuestoElectricidad,
+    iva: totalIVA,
+    total: totalComparacion
+  };
+
+  console.log('📊 NEW tariff calculation detail:', detalle);
+  console.log('📈 RESULT: Actual:', totalActual.toFixed(2), '€ | Comparación:', totalComparacion.toFixed(2), '€ | Diferencia:', diferencia.toFixed(2), '€/mes');
+  console.log('💬 Message:', mensaje);
+
+  return {
+    totalActual,
+    totalComparacion,
+    diferencia,
+    empresaNombre,
+    mensaje,
+    detalle,
+    missingAdminFields,
+    missingOcrFields
+  };
+};
+
+// ============================================
+// LEGACY: CURRENT BILL CALCULATION (kept for compatibility)
 // ============================================
 
 export const calculateCurrentElectricityCost = (
@@ -140,7 +363,8 @@ export const calculateCurrentElectricityCost = (
 };
 
 // ============================================
-// NEW TARIFF CALCULATION (ADMIN VALUES ONLY)
+// LEGACY: NEW TARIFF CALCULATION (kept for compatibility)
+// Now uses the new non-blocking logic
 // ============================================
 
 export const calculateNewElectricityCost = (
@@ -148,16 +372,12 @@ export const calculateNewElectricityCost = (
   adminTarifa: TarifaElectricidad
 ): { total: number | null; breakdown: CalculationBreakdown | null; incomplete: boolean; reason: string | null } => {
   
-  // CRITICAL: Validate admin tariff completeness
-  if (adminTarifa.potencia_p1 === null || adminTarifa.potencia_p1 === undefined) {
-    console.error('❌ NEW: Admin tariff INCOMPLETE - potencia_p1 is null');
-    return { total: null, breakdown: null, incomplete: true, reason: 'Tarifa incompleta: falta potencia_p1' };
-  }
-
-  if (adminTarifa.energia_p1 === null || adminTarifa.energia_p1 === undefined) {
-    console.error('❌ NEW: Admin tariff INCOMPLETE - energia_p1 is null');
-    return { total: null, breakdown: null, incomplete: true, reason: 'Tarifa incompleta: falta energia_p1' };
-  }
+  // Track missing fields but DON'T BLOCK
+  const missing: string[] = [];
+  if (adminTarifa.potencia_p1 === null) missing.push('potencia_p1');
+  if (adminTarifa.energia_p1 === null) missing.push('energia_p1');
+  
+  console.log("Missing admin tariff values:", missing);
 
   const dias = ocrData.dias ?? 30;
   const potencia_kw = ocrData.potencia_kw ?? 4.6;
@@ -165,18 +385,17 @@ export const calculateNewElectricityCost = (
   const consumo_p2 = ocrData.consumo_p2_kwh ?? 0;
   const consumo_p3 = ocrData.consumo_p3_kwh ?? 0;
 
-  if (consumo_p1 === 0 && consumo_p2 === 0 && consumo_p3 === 0) {
-    return { total: null, breakdown: null, incomplete: true, reason: 'Sin datos de consumo' };
-  }
-
-  const admin_potencia_p1 = adminTarifa.potencia_p1;
-  const admin_energia_p1 = adminTarifa.energia_p1;
+  // CRITICAL: Convert €/kW/año to €/kW/día
+  const precioPotenciaDiario = (adminTarifa.potencia_p1 ?? 0) / 365;
+  const potencia_cost = potencia_kw * dias * precioPotenciaDiario;
+  
+  // Energy - use only available prices
+  const admin_energia_p1 = adminTarifa.energia_p1 ?? 0;
   const admin_energia_p2 = adminTarifa.energia_p2 ?? admin_energia_p1;
   const admin_energia_p3 = adminTarifa.energia_p3 ?? admin_energia_p1;
   const admin_impuesto = adminTarifa.impuesto_electrico ?? 5.1127;
   const admin_iva = adminTarifa.iva ?? 21;
 
-  const potencia_cost = potencia_kw * dias * admin_potencia_p1;
   const energia_cost = (consumo_p1 * admin_energia_p1) + (consumo_p2 * admin_energia_p2) + (consumo_p3 * admin_energia_p3);
   const subtotal = potencia_cost + energia_cost;
   const impuesto_amount = subtotal * (admin_impuesto / 100);
@@ -188,13 +407,13 @@ export const calculateNewElectricityCost = (
     potencia_cost, energia_cost, subtotal, impuesto_amount, subtotal_con_impuesto, iva_amount, total
   };
 
-  console.log('📊 NEW tariff calculation:', { dias, potencia_kw, consumo_p1, admin_potencia_p1, admin_energia_p1, total });
+  console.log('📊 NEW tariff calculation:', { dias, potencia_kw, consumo_p1, precioPotenciaDiario, admin_energia_p1, total });
 
   return { total, breakdown, incomplete: false, reason: null };
 };
 
 // ============================================
-// MAIN COMPARISON FUNCTION
+// MAIN COMPARISON FUNCTION (updated to never block)
 // ============================================
 
 export const compareElectricityTariffs = (
@@ -205,39 +424,35 @@ export const compareElectricityTariffs = (
   console.log('═══════════════════════════════════════');
   console.log('🔄 ELECTRICITY COMPARISON START');
 
-  const currentResult = calculateCurrentElectricityCost(ocrData);
-  const newResult = calculateNewElectricityCost(ocrData, adminTarifa);
+  // Use new non-blocking calculation
+  const comparison = calculateElectricityComparison(ocrData, adminTarifa);
 
-  if (currentResult.incomplete || currentResult.total === null) {
-    return {
-      totalCurrent: null, totalNew: newResult.total,
-      savingsMonth: 0, savingsYear: 0,
-      currentBreakdown: currentResult.breakdown, newBreakdown: newResult.breakdown,
-      currentIncomplete: true, newIncomplete: newResult.incomplete,
-      incompleteReason: currentResult.reason
-    };
-  }
-
-  if (newResult.incomplete || newResult.total === null) {
-    return {
-      totalCurrent: currentResult.total, totalNew: null,
-      savingsMonth: 0, savingsYear: 0,
-      currentBreakdown: currentResult.breakdown, newBreakdown: newResult.breakdown,
-      currentIncomplete: false, newIncomplete: true,
-      incompleteReason: newResult.reason
-    };
-  }
-
-  const savingsMonth = currentResult.total - newResult.total;
+  const savingsMonth = comparison.diferencia;
   const savingsYear = savingsMonth * 12;
 
-  console.log('📈 RESULT: Current:', currentResult.total.toFixed(2), '€ | New:', newResult.total.toFixed(2), '€ | Savings:', savingsMonth.toFixed(2), '€/mes');
+  // Create legacy breakdown for compatibility
+  const newBreakdown: CalculationBreakdown = {
+    potencia_cost: comparison.detalle.potencia,
+    energia_cost: comparison.detalle.energia_p1 + comparison.detalle.energia_p2 + comparison.detalle.energia_p3,
+    subtotal: comparison.detalle.subtotal,
+    impuesto_amount: comparison.detalle.impuesto,
+    subtotal_con_impuesto: comparison.detalle.subtotal + comparison.detalle.impuesto,
+    iva_amount: comparison.detalle.iva,
+    total: comparison.detalle.total
+  };
 
   return {
-    totalCurrent: currentResult.total, totalNew: newResult.total,
-    savingsMonth, savingsYear,
-    currentBreakdown: currentResult.breakdown, newBreakdown: newResult.breakdown,
-    currentIncomplete: false, newIncomplete: false, incompleteReason: null
+    totalCurrent: comparison.totalActual,
+    totalNew: comparison.totalComparacion,
+    savingsMonth,
+    savingsYear,
+    currentBreakdown: null,
+    newBreakdown,
+    currentIncomplete: false,
+    newIncomplete: false,
+    incompleteReason: null,
+    detalle: comparison.detalle,
+    missingAdminFields: comparison.missingAdminFields
   };
 };
 
@@ -248,12 +463,20 @@ export const compareElectricityTariffs = (
 const DEFAULT_CONTRACTED_POWER = 4.6;
 
 export const calculateMonthlyElectricityPrice = (consumoKwh: number, tarifa: TarifaElectricidad): number | null => {
-  if (!tarifa.energia_p1 || tarifa.potencia_p1 === null) return null;
-  const energyCost = consumoKwh * tarifa.energia_p1;
-  const powerCost = tarifa.potencia_p1 * 30 * DEFAULT_CONTRACTED_POWER;
+  // Use only available values - don't block
+  const energyPrice = tarifa.energia_p1 ?? 0;
+  const powerPrice = (tarifa.potencia_p1 ?? 0) / 365; // Convert from €/kW/año to €/kW/día
+  
+  const energyCost = consumoKwh * energyPrice;
+  const powerCost = powerPrice * 30 * DEFAULT_CONTRACTED_POWER;
   let subtotal = energyCost + powerCost;
-  if (tarifa.impuesto_electrico) subtotal *= (1 + tarifa.impuesto_electrico / 100);
-  if (tarifa.iva) subtotal *= (1 + tarifa.iva / 100);
+  
+  const impuesto = tarifa.impuesto_electrico ?? 5.1127;
+  subtotal *= (1 + impuesto / 100);
+  
+  const iva = tarifa.iva ?? 21;
+  subtotal *= (1 + iva / 100);
+  
   return subtotal;
 };
 
