@@ -11,7 +11,13 @@ import { useBranding } from "@/contexts/BrandingContext";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Footer from "@/components/Footer";
-import { calculateMonthlyElectricityPrice, calculateMonthlyGasPrice, formatCurrency, compareElectricityTariffs, convertToOCRFormat } from "@/utils/tariffCalculations";
+import { 
+  calculateMonthlyGasPrice, 
+  formatCurrency, 
+  calculateElectricityComparison, 
+  convertToOCRFormat,
+  CalculationDetail 
+} from "@/utils/tariffCalculations";
 
 interface CompanyOption {
   id: string;
@@ -68,6 +74,12 @@ const Results = () => {
   const [comparisonMessage, setComparisonMessage] = useState<string | null>(null);
   const [comparisonMessageType, setComparisonMessageType] = useState<'positive' | 'neutral' | 'negative'>('positive');
   
+  // NEW: Calculation detail state
+  const [calculationDetail, setCalculationDetail] = useState<CalculationDetail | null>(null);
+  const [missingAdminFields, setMissingAdminFields] = useState<string[]>([]);
+  const [totalActual, setTotalActual] = useState<number>(0);
+  const [totalComparacion, setTotalComparacion] = useState<number>(0);
+  
   // Explainability data
   const detectedFields = location.state?.detectedFields || [];
   const fallbacksApplied = location.state?.fallbacksApplied || [];
@@ -81,16 +93,6 @@ const Results = () => {
       const ocrData = convertToOCRFormat(extractedData);
 
       console.log('📊 OCR data for comparison:', ocrData);
-
-      // If no consumption data, can't compare
-      if ((ocrData.consumo_p1_kwh ?? 0) === 0) {
-        setLoading(false);
-        setSavingsPerMonth("0,00");
-        setSavingsPerYear("0,00");
-        setComparisonMessage("No hay datos de consumo para comparar.");
-        setComparisonMessageType('neutral');
-        return;
-      }
 
       // Load all companies
       const { data: todasEmpresas } = await supabase
@@ -112,11 +114,10 @@ const Results = () => {
               .eq("empresa_id", empresa.id)
               .single();
 
-          if (tarifaElec) {
-              // Convert extracted data to OCR format and compare
-              const ocrData = convertToOCRFormat(extractedData);
-              const comparison = compareElectricityTariffs(ocrData, tarifaElec);
-              calculatedPrice = comparison.totalNew;
+            if (tarifaElec) {
+              // Use new non-blocking comparison
+              const comparison = calculateElectricityComparison(ocrData, tarifaElec, empresa.nombre);
+              calculatedPrice = comparison.totalComparacion;
             }
           } else {
             const { data: tarifaGas } = await supabase
@@ -165,7 +166,7 @@ const Results = () => {
           c.name.toUpperCase() === displayCompany.toUpperCase()
         );
 
-        if (targetCompany && targetCompany.hasTariff && targetCompany.pricePerMonth !== null) {
+        if (targetCompany) {
           // Get admin tariff for comparison
           const { data: adminTarifa } = await supabase
             .from("tarifas_electricidad")
@@ -174,53 +175,51 @@ const Results = () => {
             .single();
 
           if (adminTarifa) {
-            // Convert extracted data to OCR format and compare
-            const ocrData = convertToOCRFormat(extractedData);
-            const comparison = compareElectricityTariffs(ocrData, adminTarifa);
+            // Use NEW non-blocking comparison function
+            const comparison = calculateElectricityComparison(ocrData, adminTarifa, targetCompany.name);
             
-            console.log('📊 Electricity comparison result:', {
-              totalCurrent: comparison.totalCurrent,
-              totalNew: comparison.totalNew,
-              savingsMonth: comparison.savingsMonth,
-              savingsYear: comparison.savingsYear
-            });
+            console.log('📊 Electricity comparison result:', comparison);
 
-            // Check if tariff is incomplete (totalNew is null)
-            if (comparison.totalNew === null) {
-              console.warn('⚠️ Tarifa incompleta - potencia_p1 no configurada');
-              setSavingsPerMonth("0,00");
-              setSavingsPerYear("0,00");
-              setComparisonMessage("Tarifa incompleta. Configure potencia_p1 para esta empresa.");
-              setComparisonMessageType('neutral');
-            } else if (comparison.savingsMonth > 0.01) {
+            // Store calculation details
+            setCalculationDetail(comparison.detalle);
+            setMissingAdminFields(comparison.missingAdminFields);
+            setTotalActual(comparison.totalActual);
+            setTotalComparacion(comparison.totalComparacion);
+
+            const diferencia = comparison.diferencia;
+
+            // NEW LOGIC: Always show result, even if negative
+            if (diferencia >= 0.01) {
               // Positive savings
-              setSavingsPerMonth(formatCurrency(comparison.savingsMonth));
-              setSavingsPerYear(formatCurrency(comparison.savingsYear));
-              setComparisonMessage(null);
+              setSavingsPerMonth(formatCurrency(diferencia));
+              setSavingsPerYear(formatCurrency(diferencia * 12));
+              setComparisonMessage(`Con ${targetCompany.name} ahorrarías ${formatCurrency(diferencia)} €/mes.`);
               setComparisonMessageType('positive');
-            } else if (comparison.totalCurrent < comparison.totalNew) {
-              // New tariff is more expensive
-              setSavingsPerMonth("0,00");
-              setSavingsPerYear("0,00");
-              setComparisonMessage("La tarifa comparada es más cara. Cambio no recomendado.");
+            } else if (diferencia <= -0.01) {
+              // New tariff is more expensive - SHOW THE DIFFERENCE
+              const extraCost = Math.abs(diferencia);
+              setSavingsPerMonth(`+${formatCurrency(extraCost)}`);
+              setSavingsPerYear(`+${formatCurrency(extraCost * 12)}`);
+              setComparisonMessage(`Tu tarifa actual es más económica. Con ${targetCompany.name} pagarías ${formatCurrency(extraCost)} €/mes más.`);
               setComparisonMessageType('negative');
             } else {
-              // No savings
+              // No significant difference
               setSavingsPerMonth("0,00");
               setSavingsPerYear("0,00");
-              setComparisonMessage("No hay ahorro con esta tarifa.");
+              setComparisonMessage("No hay diferencia significativa entre las tarifas.");
               setComparisonMessageType('neutral');
             }
           } else {
-            setSavingsPerMonth("0,00");
-            setSavingsPerYear("0,00");
-            setComparisonMessage("No hay datos de tarifa disponibles para comparar.");
+            // No tariff configured - but still try to show something
+            setSavingsPerMonth("--");
+            setSavingsPerYear("--");
+            setComparisonMessage(`No hay tarifa configurada para ${targetCompany.name}. Configure los precios en el panel de administración.`);
             setComparisonMessageType('neutral');
           }
         } else {
-          setSavingsPerMonth("0,00");
-          setSavingsPerYear("0,00");
-          setComparisonMessage("No hay datos de tarifa disponibles para comparar.");
+          setSavingsPerMonth("--");
+          setSavingsPerYear("--");
+          setComparisonMessage("Empresa no encontrada en el sistema.");
           setComparisonMessageType('neutral');
         }
       } else {
@@ -238,23 +237,24 @@ const Results = () => {
           if (monthlyDiff > 0.01) {
             setSavingsPerMonth(formatCurrency(monthlyDiff));
             setSavingsPerYear(formatCurrency(monthlyDiff * 12));
-            setComparisonMessage(null);
+            setComparisonMessage(`Con ${cheapestCompany.name} ahorrarías ${formatCurrency(monthlyDiff)} €/mes.`);
             setComparisonMessageType('positive');
           } else if (monthlyDiff < -0.01) {
-            setSavingsPerMonth("0,00");
-            setSavingsPerYear("0,00");
-            setComparisonMessage("La tarifa comparada es más cara. Cambio no recomendado.");
+            const extraCost = Math.abs(monthlyDiff);
+            setSavingsPerMonth(`+${formatCurrency(extraCost)}`);
+            setSavingsPerYear(`+${formatCurrency(extraCost * 12)}`);
+            setComparisonMessage(`Tu tarifa actual es más económica. Con ${cheapestCompany.name} pagarías ${formatCurrency(extraCost)} €/mes más.`);
             setComparisonMessageType('negative');
           } else {
             setSavingsPerMonth("0,00");
             setSavingsPerYear("0,00");
-            setComparisonMessage("No hay ahorro con esta tarifa.");
+            setComparisonMessage("No hay diferencia significativa entre las tarifas.");
             setComparisonMessageType('neutral');
           }
         } else {
-          setSavingsPerMonth("0,00");
-          setSavingsPerYear("0,00");
-          setComparisonMessage("No hay datos de tarifa disponibles para comparar.");
+          setSavingsPerMonth("--");
+          setSavingsPerYear("--");
+          setComparisonMessage("No hay datos suficientes para comparar.");
           setComparisonMessageType('neutral');
         }
       }
@@ -339,18 +339,24 @@ const Results = () => {
       // Savings section
       doc.setFontSize(16);
       doc.setTextColor(10, 135, 84); // Green
-      doc.text("Ahorro Estimado", 20, 138);
+      doc.text("Resultado de la Comparación", 20, 138);
       
       doc.setFontSize(14);
       doc.text(`${savingsPerMonth} €/mes`, 20, 150);
       doc.text(`${savingsPerYear} €/año`, 20, 160);
       
+      if (comparisonMessage) {
+        doc.setFontSize(11);
+        doc.setTextColor(100, 100, 100);
+        doc.text(comparisonMessage, 20, 172, { maxWidth: pageWidth - 40 });
+      }
+      
       // Company comparison section
       doc.setFontSize(14);
       doc.setTextColor(0, 0, 0);
-      doc.text("Comparación de Empresas", 20, 178);
+      doc.text("Comparación de Empresas", 20, 190);
       
-      let yPosition = 188;
+      let yPosition = 200;
       companies.forEach((company, index) => {
         doc.setFontSize(11);
         const priceText = company.hasTariff && company.pricePerMonth !== null 
@@ -555,39 +561,142 @@ const Results = () => {
           </div>
         )}
 
-        {/* Savings Header */}
+        {/* Comparison Result Header */}
         <div className="text-center space-y-4 pt-4">
           <h2 className="text-xl md:text-2xl font-bold" style={{
             color: companyBranding?.text_color || '#FFFFFF'
           }}>
-            {comparisonMessage ? 'Resultado de la comparación:' : 'Podrías ahorrar:'}
+            Resultado de la comparación
           </h2>
           
-          {comparisonMessage ? (
+          {/* Comparison Message - ALWAYS SHOWN */}
+          {comparisonMessage && (
             <div className={`p-4 rounded-xl ${
-              comparisonMessageType === 'negative' 
-                ? 'bg-red-500/20 border border-red-400/30' 
-                : 'bg-yellow-500/20 border border-yellow-400/30'
+              comparisonMessageType === 'positive' 
+                ? 'bg-green-500/20 border border-green-400/30'
+                : comparisonMessageType === 'negative' 
+                  ? 'bg-red-500/20 border border-red-400/30' 
+                  : 'bg-yellow-500/20 border border-yellow-400/30'
             }`}>
               <p className={`text-lg font-semibold ${
-                comparisonMessageType === 'negative' ? 'text-red-300' : 'text-yellow-300'
+                comparisonMessageType === 'positive' 
+                  ? 'text-green-300'
+                  : comparisonMessageType === 'negative' 
+                    ? 'text-red-300' 
+                    : 'text-yellow-300'
               }`}>
                 {comparisonMessage}
               </p>
             </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="text-5xl md:text-6xl font-bold text-[#0A8754]">
-                {savingsPerMonth} €/mes
+          )}
+          
+          {/* Savings Display */}
+          <div className="space-y-2">
+            <div className={`text-5xl md:text-6xl font-bold ${
+              comparisonMessageType === 'positive' 
+                ? 'text-[#0A8754]' 
+                : comparisonMessageType === 'negative'
+                  ? 'text-red-400'
+                  : 'text-yellow-400'
+            }`}>
+              {savingsPerMonth} €/mes
+            </div>
+            <div className="text-xl md:text-2xl font-medium" style={{
+              color: companyBranding?.text_color ? `${companyBranding.text_color}CC` : 'rgba(255, 255, 255, 0.8)'
+            }}>
+              {savingsPerYear} €/año
+            </div>
+          </div>
+        </div>
+
+        {/* NEW: Calculation Detail Section (Debugging & Transparency) */}
+        {tariffType === "electricity" && calculationDetail && (
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-5 space-y-4 shadow-lg border border-white/10">
+            <h3 className="text-lg font-semibold" style={{
+              color: companyBranding?.text_color || '#FFFFFF'
+            }}>
+              Detalle del cálculo
+            </h3>
+            
+            {/* Cost comparison */}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="bg-white/5 rounded-lg p-3">
+                <p className="text-xs mb-1" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Tu factura actual</p>
+                <p className="text-xl font-bold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {formatCurrency(totalActual)} €
+                </p>
               </div>
-              <div className="text-xl md:text-2xl font-medium" style={{
-                color: companyBranding?.text_color ? `${companyBranding.text_color}CC` : 'rgba(255, 255, 255, 0.8)'
-              }}>
-                {savingsPerYear} €/año
+              <div className="bg-white/5 rounded-lg p-3">
+                <p className="text-xs mb-1" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Con {currentCompany}</p>
+                <p className="text-xl font-bold" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {formatCurrency(totalComparacion)} €
+                </p>
               </div>
             </div>
-          )}
-        </div>
+            
+            {/* Breakdown */}
+            <div className="space-y-2 text-sm border-t border-white/10 pt-3">
+              <p className="font-medium mb-2" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                Desglose del cálculo ({currentCompany}):
+              </p>
+              <div className="flex justify-between items-center">
+                <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Potencia:</span>
+                <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {formatCurrency(calculationDetail.potencia)} €
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Energía P1:</span>
+                <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {formatCurrency(calculationDetail.energia_p1)} €
+                </span>
+              </div>
+              {calculationDetail.energia_p2 > 0 && (
+                <div className="flex justify-between items-center">
+                  <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Energía P2:</span>
+                  <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                    {formatCurrency(calculationDetail.energia_p2)} €
+                  </span>
+                </div>
+              )}
+              {calculationDetail.energia_p3 > 0 && (
+                <div className="flex justify-between items-center">
+                  <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Energía P3:</span>
+                  <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                    {formatCurrency(calculationDetail.energia_p3)} €
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Impuesto eléctrico:</span>
+                <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {formatCurrency(calculationDetail.impuesto)} €
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>IVA:</span>
+                <span className="font-medium" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {formatCurrency(calculationDetail.iva)} €
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                <span className="font-semibold" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Total:</span>
+                <span className="font-bold text-lg" style={{ color: companyBranding?.text_color || '#FFFFFF' }}>
+                  {formatCurrency(calculationDetail.total)} €
+                </span>
+              </div>
+            </div>
+            
+            {/* Missing admin fields warning */}
+            {missingAdminFields.length > 0 && (
+              <div className="bg-yellow-500/10 rounded-lg p-3 mt-3">
+                <p className="text-xs text-yellow-300">
+                  ⚠️ Campos de tarifa no configurados: {missingAdminFields.join(', ')}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Explainability Section */}
         {(detectedFields.length > 0 || fallbacksApplied.length > 0) && (
