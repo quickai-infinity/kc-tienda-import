@@ -5,6 +5,106 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Electricity extraction tool
+const electricityTool = {
+  type: "function",
+  function: {
+    name: "extract_invoice_data",
+    description: "Extraer datos estructurados de una factura de electricidad",
+    parameters: {
+      type: "object",
+      properties: {
+        consumo_kwh: {
+          type: "number",
+          description: "Consumo mensual en kWh"
+        },
+        tarifa: {
+          type: "string",
+          description: "Nombre de la tarifa contratada"
+        },
+        cups: {
+          type: "string",
+          description: "Código CUPS (20-22 caracteres)"
+        },
+        empresa: {
+          type: "string",
+          description: "Nombre de la empresa proveedora"
+        },
+        precio_mensual: {
+          type: "number",
+          description: "Precio total mensual en euros"
+        },
+        potencia_kw: {
+          type: "number",
+          description: "Potencia contratada en kW"
+        }
+      },
+      required: ["consumo_kwh", "tarifa", "cups", "empresa", "precio_mensual"],
+      additionalProperties: false
+    }
+  }
+};
+
+// Gas extraction tool with specific gas fields
+const gasTool = {
+  type: "function",
+  function: {
+    name: "extract_gas_invoice_data",
+    description: "Extraer datos estructurados de una factura de gas natural",
+    parameters: {
+      type: "object",
+      properties: {
+        empresa: {
+          type: "string",
+          description: "Nombre de la empresa proveedora de gas"
+        },
+        termino_fijo: {
+          type: "number",
+          description: "Término fijo mensual en €/mes"
+        },
+        termino_variable: {
+          type: "number",
+          description: "Término variable en €/kWh"
+        },
+        lectura_anterior: {
+          type: "number",
+          description: "Lectura anterior del contador en m3"
+        },
+        lectura_actual: {
+          type: "number",
+          description: "Lectura actual del contador en m3"
+        },
+        factor_conversion: {
+          type: "number",
+          description: "Factor de conversión kWh/m3 (normalmente entre 10 y 12)"
+        },
+        tarifa_atr: {
+          type: "string",
+          description: "Tarifa de acceso ATR (TUR1, TUR2, RL.1, RL.2, etc.)"
+        },
+        iva: {
+          type: "number",
+          description: "Porcentaje de IVA aplicado (normalmente 21)"
+        },
+        consumo_m3: {
+          type: "number",
+          description: "Consumo en metros cúbicos"
+        },
+        consumo_kwh: {
+          type: "number",
+          description: "Consumo convertido a kWh"
+        },
+        precio_mensual: {
+          type: "number",
+          description: "Precio total de la factura en euros"
+        }
+      },
+      required: ["empresa", "consumo_kwh", "precio_mensual"],
+      additionalProperties: false
+    }
+  }
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -25,6 +125,7 @@ serve(async (req) => {
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
+    const tariffType = formData.get("tariffType") as string || "electricity";
     
     if (!file) {
       return new Response(
@@ -63,7 +164,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Processing file:", file.name, "Type:", file.type);
+    console.log("Processing file:", file.name, "Type:", file.type, "Tariff Type:", tariffType);
 
     // Convert file to base64 in chunks to avoid stack overflow
     const arrayBuffer = await file.arrayBuffer();
@@ -89,7 +190,45 @@ serve(async (req) => {
 
     const imageUrl = `data:${mimeType};base64,${base64}`;
 
-    console.log("Calling Lovable AI for data extraction");
+    // Choose prompt and tool based on tariff type
+    const isGas = tariffType === "gas";
+    
+    const electricityPrompt = `Analiza esta factura de electricidad española y extrae la siguiente información:
+- Consumo mensual en kWh (busca "Consumo" o "kWh")
+- Tarifa actual (nombre de la tarifa contratada)
+- CUPS (Código Universal del Punto de Suministro - 20-22 caracteres alfanuméricos)
+- Empresa proveedora
+- Precio mensual total en euros
+- Potencia contratada en kW
+
+Si no encuentras algún dato, devuelve null para ese campo.`;
+
+    const gasPrompt = `Analiza esta factura de GAS NATURAL española y extrae la siguiente información específica de gas:
+
+CAMPOS REQUERIDOS:
+- Empresa proveedora de gas
+- Término fijo (€/mes) - busca "término fijo", "cargo fijo", "fijo mensual"
+- Término variable (€/kWh) - busca "término variable", "precio kWh", "€/kWh"
+- Lectura anterior del contador (m3) - busca "lectura anterior", "anterior"
+- Lectura actual del contador (m3) - busca "lectura actual", "actual"
+- Factor de conversión (kWh/m3) - normalmente entre 10 y 12, busca "factor conversión", "PCS"
+- Tarifa ATR - busca "TUR1", "TUR2", "RL.1", "RL.2", "ATR", "tarifa acceso"
+- IVA aplicado (porcentaje, normalmente 21%)
+- Consumo en m3 (diferencia entre lecturas o valor indicado)
+- Consumo en kWh (m3 × factor conversión o valor indicado)
+- Precio total de la factura en euros
+
+IMPORTANTE: 
+- Busca palabras clave de gas: "m3", "metros cúbicos", "kWh/m3", "gas natural", "término fijo gas", "término variable gas"
+- NO extraer campos de electricidad como CUPS, potencia P1/P2, impuesto eléctrico
+- Si no encuentras algún dato, devuelve null para ese campo
+- El factor de conversión típico es entre 10.5 y 11.5 kWh/m3`;
+
+    const prompt = isGas ? gasPrompt : electricityPrompt;
+    const tool = isGas ? gasTool : electricityTool;
+    const toolName = isGas ? "extract_gas_invoice_data" : "extract_invoice_data";
+
+    console.log("Calling Lovable AI for", isGas ? "GAS" : "ELECTRICITY", "data extraction");
 
     // Call Lovable AI with tool calling for structured extraction
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -106,14 +245,7 @@ serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: `Analiza esta factura de electricidad española y extrae la siguiente información:
-- Consumo mensual en kWh (busca "Consumo" o "kWh")
-- Tarifa actual (nombre de la tarifa contratada)
-- CUPS (Código Universal del Punto de Suministro - 20-22 caracteres alfanuméricos)
-- Empresa proveedora
-- Precio mensual total en euros
-
-Si no encuentras algún dato, devuelve null para ese campo.`
+                text: prompt
               },
               {
                 type: "image_url",
@@ -124,47 +256,8 @@ Si no encuentras algún dato, devuelve null para ese campo.`
             ]
           }
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_invoice_data",
-              description: "Extraer datos estructurados de una factura de electricidad",
-              parameters: {
-                type: "object",
-                properties: {
-                  consumo_kwh: {
-                    type: "number",
-                    description: "Consumo mensual en kWh"
-                  },
-                  tarifa: {
-                    type: "string",
-                    description: "Nombre de la tarifa contratada"
-                  },
-                  cups: {
-                    type: "string",
-                    description: "Código CUPS (20-22 caracteres)"
-                  },
-                  empresa: {
-                    type: "string",
-                    description: "Nombre de la empresa proveedora"
-                  },
-                  precio_mensual: {
-                    type: "number",
-                    description: "Precio total mensual en euros"
-                  },
-                  potencia_kw: {
-                    type: "number",
-                    description: "Potencia contratada en kW"
-                  }
-                },
-                required: ["consumo_kwh", "tarifa", "cups", "empresa", "precio_mensual"],
-                additionalProperties: false
-              }
-            }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "extract_invoice_data" } }
+        tools: [tool],
+        tool_choice: { type: "function", function: { name: toolName } }
       }),
     });
 
@@ -220,10 +313,34 @@ Si no encuentras algún dato, devuelve null para ese campo.`
     const extractedData = JSON.parse(toolCall.function.arguments);
     console.log("Extracted data:", extractedData);
 
+    // For gas invoices, calculate derived fields if not present
+    if (isGas) {
+      // Calculate consumption in m3 if we have readings
+      if (extractedData.lectura_actual && extractedData.lectura_anterior && !extractedData.consumo_m3) {
+        extractedData.consumo_m3 = extractedData.lectura_actual - extractedData.lectura_anterior;
+      }
+      
+      // Calculate consumption in kWh if we have m3 and conversion factor
+      if (extractedData.consumo_m3 && extractedData.factor_conversion && !extractedData.consumo_kwh) {
+        extractedData.consumo_kwh = extractedData.consumo_m3 * extractedData.factor_conversion;
+      }
+      
+      // Default IVA if not found
+      if (!extractedData.iva) {
+        extractedData.iva = 21;
+      }
+      
+      // Default conversion factor if not found
+      if (!extractedData.factor_conversion) {
+        extractedData.factor_conversion = 11.0;
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
-        data: extractedData
+        data: extractedData,
+        tariffType: tariffType
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

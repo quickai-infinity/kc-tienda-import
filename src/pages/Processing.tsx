@@ -67,9 +67,14 @@ const Processing = () => {
           ));
         };
 
-        // Create form data
+        // Get tariff type from state or localStorage
+        const tariffType = location.state?.tariffType || localStorage.getItem('tariffType') || "electricity";
+        console.log("Processing with tariff type:", tariffType);
+
+        // Create form data with tariff type
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('tariffType', tariffType);
 
         // Call edge function
         const response = await fetch(
@@ -134,7 +139,6 @@ const Processing = () => {
         }
 
         // Navigate to results with extracted data
-        const tariffType = location.state?.tariffType || localStorage.getItem('tariffType') || "electricity";
         
         console.log('Processing - Passing to results:', { currentCompany, selectedCompany, extractedData_empresa: extractedData.empresa, tariffType });
         
