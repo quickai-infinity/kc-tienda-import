@@ -5,18 +5,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Electricity extraction tool
+// Electricity extraction tool with extended fields for validation
 const electricityTool = {
   type: "function",
   function: {
     name: "extract_invoice_data",
-    description: "Extraer datos estructurados de una factura de electricidad",
+    description: "Extraer datos estructurados de una factura de electricidad española",
     parameters: {
       type: "object",
       properties: {
         consumo_kwh: {
           type: "number",
-          description: "Consumo mensual en kWh"
+          description: "Consumo total mensual en kWh"
         },
         tarifa: {
           type: "string",
@@ -37,6 +37,39 @@ const electricityTool = {
         potencia_kw: {
           type: "number",
           description: "Potencia contratada en kW"
+        },
+        // Extended fields for validation
+        potencia_price: {
+          type: "number",
+          description: "Precio del término de potencia en €/kW/día"
+        },
+        potencia_days: {
+          type: "number",
+          description: "Número de días del periodo de facturación"
+        },
+        consumo_p1: {
+          type: "number",
+          description: "Consumo en periodo P1 (punta) en kWh"
+        },
+        consumo_p2: {
+          type: "number",
+          description: "Consumo en periodo P2 (llano) en kWh"
+        },
+        energia_p1_price: {
+          type: "number",
+          description: "Precio energía P1 en €/kWh"
+        },
+        energia_p2_price: {
+          type: "number",
+          description: "Precio energía P2 en €/kWh"
+        },
+        impuesto_electrico: {
+          type: "number",
+          description: "Porcentaje del impuesto eléctrico (normalmente 5.11%)"
+        },
+        iva: {
+          type: "number",
+          description: "Porcentaje de IVA aplicado (normalmente 21%)"
         }
       },
       required: ["consumo_kwh", "tarifa", "cups", "empresa", "precio_mensual"],
@@ -194,12 +227,24 @@ serve(async (req) => {
     const isGas = tariffType === "gas";
     
     const electricityPrompt = `Analiza esta factura de electricidad española y extrae la siguiente información:
-- Consumo mensual en kWh (busca "Consumo" o "kWh")
+
+CAMPOS PRINCIPALES:
+- Consumo mensual total en kWh (busca "Consumo" o "kWh")
 - Tarifa actual (nombre de la tarifa contratada)
 - CUPS (Código Universal del Punto de Suministro - 20-22 caracteres alfanuméricos)
 - Empresa proveedora
 - Precio mensual total en euros
 - Potencia contratada en kW
+
+CAMPOS ADICIONALES PARA VALIDACIÓN (si están disponibles):
+- Precio del término de potencia (€/kW/día)
+- Número de días del periodo de facturación
+- Consumo en periodo P1 (punta) en kWh
+- Consumo en periodo P2 (llano) en kWh
+- Precio energía P1 (€/kWh)
+- Precio energía P2 (€/kWh)
+- Porcentaje del impuesto eléctrico (normalmente 5.11%)
+- Porcentaje de IVA (normalmente 21%)
 
 Si no encuentras algún dato, devuelve null para ese campo.`;
 
@@ -313,6 +358,28 @@ IMPORTANTE:
     const extractedData = JSON.parse(toolCall.function.arguments);
     console.log("Extracted data:", extractedData);
 
+    // Validation for electricity invoices only
+    let validationWarning: string | null = null;
+    if (!isGas) {
+      const requiredElectricityFields = [
+        'potencia_price',
+        'potencia_days', 
+        'consumo_p1',
+        'energia_p1_price',
+        'impuesto_electrico',
+        'iva'
+      ];
+      
+      const missingFields = requiredElectricityFields.filter(field => 
+        extractedData[field] === null || extractedData[field] === undefined
+      );
+      
+      if (missingFields.length > 0) {
+        console.log("Electricity validation warning - missing fields:", missingFields);
+        validationWarning = "Revisa los datos extraídos. Algunos campos no coinciden con una factura eléctrica estándar.";
+      }
+    }
+
     // For gas invoices, calculate derived fields if not present
     if (isGas) {
       // Calculate consumption in m3 if we have readings
@@ -340,7 +407,8 @@ IMPORTANTE:
       JSON.stringify({
         success: true,
         data: extractedData,
-        tariffType: tariffType
+        tariffType: tariffType,
+        validationWarning: validationWarning
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
