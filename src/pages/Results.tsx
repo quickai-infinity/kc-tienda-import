@@ -11,7 +11,7 @@ import { useBranding } from "@/contexts/BrandingContext";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Footer from "@/components/Footer";
-import { calculateMonthlyElectricityPrice, calculateMonthlyGasPrice, formatCurrency } from "@/utils/tariffCalculations";
+import { calculateMonthlyElectricityPrice, calculateMonthlyGasPrice, formatCurrency, compareElectricityTariffs, ElectricityInvoiceData } from "@/utils/tariffCalculations";
 
 interface CompanyOption {
   id: string;
@@ -75,20 +75,36 @@ const Results = () => {
   // Load tariffs and calculate prices
   useEffect(() => {
     const loadTariffsAndCalculate = async () => {
-      const consumoKwh = parseFloat(extractedData.consumo_kwh) || 0;
-      const precioActual = parseFloat(extractedData.precio_mensual) || null;
+      const displayCompany = currentCompany;
+      
+      // Build invoice data from extracted fields
+      const invoiceData: ElectricityInvoiceData = {
+        days: parseFloat(extractedData.potencia_days) || 30,
+        potencia_kw: parseFloat(extractedData.potencia_kw) || 4.6,
+        potencia_price: parseFloat(extractedData.potencia_price) || 0,
+        consumo_p1_kwh: parseFloat(extractedData.consumo_p1) || parseFloat(extractedData.consumo_kwh) || 0,
+        consumo_p2_kwh: parseFloat(extractedData.consumo_p2) || 0,
+        consumo_p3_kwh: parseFloat(extractedData.consumo_p3) || 0,
+        energia_p1_price: parseFloat(extractedData.energia_p1_price) || 0,
+        energia_p2_price: parseFloat(extractedData.energia_p2_price) || 0,
+        energia_p3_price: parseFloat(extractedData.energia_p3_price) || 0,
+        impuesto_electrico_pct: parseFloat(extractedData.impuesto_electrico) || 5.1127,
+        iva_pct: parseFloat(extractedData.iva) || 21,
+      };
 
-      if (!consumoKwh) {
+      console.log('Invoice data for comparison:', invoiceData);
+
+      // If no consumption data, can't compare
+      if (invoiceData.consumo_p1_kwh === 0) {
         setLoading(false);
+        setSavingsPerMonth("0,00");
+        setSavingsPerYear("0,00");
+        setComparisonMessage("No hay datos de consumo para comparar.");
+        setComparisonMessageType('neutral');
         return;
       }
 
-      // Empresa mostrada: la seleccionada por el usuario o la del OCR
-      const displayCompany = currentCompany;
-      
-      console.log('Loading all companies for comparison:', { displayCompany, precioActual, consumoKwh });
-      
-      // Cargar TODAS las empresas para comparar
+      // Load all companies
       const { data: todasEmpresas } = await supabase
         .from("empresas")
         .select("id, nombre");
@@ -96,9 +112,7 @@ const Results = () => {
       console.log('All companies:', todasEmpresas);
 
       const calculatedCompanies: CompanyOption[] = [];
-      let currentCompanyPrice: number | null = precioActual;
 
-      // Calcular precio para TODAS las empresas
       if (todasEmpresas) {
         for (const empresa of todasEmpresas) {
           let calculatedPrice: number | null = null;
@@ -111,7 +125,9 @@ const Results = () => {
               .single();
 
             if (tarifaElec) {
-              calculatedPrice = calculateMonthlyElectricityPrice(consumoKwh, tarifaElec);
+              // Calculate NEW cost using admin tariff with invoice consumption
+              const comparison = compareElectricityTariffs(invoiceData, tarifaElec);
+              calculatedPrice = comparison.totalNew;
             }
           } else {
             const { data: tarifaGas } = await supabase
@@ -121,7 +137,10 @@ const Results = () => {
               .single();
 
             if (tarifaGas) {
-              calculatedPrice = calculateMonthlyGasPrice(consumoKwh, tarifaGas);
+              calculatedPrice = calculateMonthlyGasPrice(
+                invoiceData.consumo_p1_kwh + invoiceData.consumo_p2_kwh + invoiceData.consumo_p3_kwh,
+                tarifaGas
+              );
             }
           }
 
@@ -131,18 +150,12 @@ const Results = () => {
             pricePerMonth: calculatedPrice,
             hasTariff: calculatedPrice !== null,
           });
-
-          // Si es la empresa actual, guardar su precio
-          if (empresa.nombre.toUpperCase() === displayCompany.toUpperCase()) {
-            currentCompanyPrice = calculatedPrice || precioActual;
-          }
         }
       }
 
       console.log('All calculated companies:', calculatedCompanies);
-      console.log('Current company price:', currentCompanyPrice);
 
-      // Mostrar solo la empresa actual en la lista
+      // Show current company in the list
       const currentCompanyData = calculatedCompanies.find(c => 
         c.name.toUpperCase() === displayCompany.toUpperCase()
       );
@@ -153,61 +166,108 @@ const Results = () => {
         setCompanies([{
           id: displayCompany,
           name: displayCompany,
-          pricePerMonth: precioActual,
+          pricePerMonth: null,
           hasTariff: false,
         }]);
       }
 
-      // Calcular ahorro: encontrar la empresa MÁS BARATA
-      const companiesWithPrices = calculatedCompanies.filter(c => c.pricePerMonth !== null);
-      
-      if (companiesWithPrices.length > 0 && currentCompanyPrice !== null) {
-        const cheapestCompany = companiesWithPrices.reduce((prev, current) => 
-          (current.pricePerMonth! < prev.pricePerMonth!) ? current : prev
+      // For electricity: use new comparison logic
+      if (tariffType === "electricity") {
+        // Find the company to compare against (the selected company from dropdown)
+        const targetCompany = calculatedCompanies.find(c => 
+          c.name.toUpperCase() === displayCompany.toUpperCase()
         );
 
-        console.log('Cheapest company:', cheapestCompany);
+        if (targetCompany && targetCompany.hasTariff && targetCompany.pricePerMonth !== null) {
+          // Get admin tariff for comparison
+          const { data: adminTarifa } = await supabase
+            .from("tarifas_electricidad")
+            .select("*")
+            .eq("empresa_id", targetCompany.id)
+            .single();
 
-        const monthlyDiff = currentCompanyPrice - (cheapestCompany.pricePerMonth || 0);
-        
-        console.log('Savings calculation:', {
-          currentCompanyPrice,
-          cheapestPrice: cheapestCompany.pricePerMonth,
-          monthlyDiff
-        });
+          if (adminTarifa) {
+            const comparison = compareElectricityTariffs(invoiceData, adminTarifa);
+            
+            console.log('Electricity comparison result:', {
+              totalCurrent: comparison.totalCurrent,
+              totalNew: comparison.totalNew,
+              savingsMonth: comparison.savingsMonth,
+              savingsYear: comparison.savingsYear
+            });
 
-        // Comparison messages based on savings
-        if (monthlyDiff > 0.01) {
-          // Positive savings
-          setSavingsPerMonth(formatCurrency(monthlyDiff));
-          setSavingsPerYear(formatCurrency(monthlyDiff * 12));
-          setComparisonMessage(null);
-          setComparisonMessageType('positive');
-        } else if (Math.abs(monthlyDiff) < 0.01) {
-          // No savings (prices are equal)
-          setSavingsPerMonth("0,00");
-          setSavingsPerYear("0,00");
-          setComparisonMessage("No hay ahorro con esta tarifa.");
-          setComparisonMessageType('neutral');
+            if (comparison.savingsMonth > 0.01) {
+              // Positive savings
+              setSavingsPerMonth(formatCurrency(comparison.savingsMonth));
+              setSavingsPerYear(formatCurrency(comparison.savingsYear));
+              setComparisonMessage(null);
+              setComparisonMessageType('positive');
+            } else if (comparison.totalNew !== null && comparison.totalCurrent < comparison.totalNew) {
+              // New tariff is more expensive
+              setSavingsPerMonth("0,00");
+              setSavingsPerYear("0,00");
+              setComparisonMessage("La tarifa comparada es más cara. Cambio no recomendado.");
+              setComparisonMessageType('negative');
+            } else {
+              // No savings
+              setSavingsPerMonth("0,00");
+              setSavingsPerYear("0,00");
+              setComparisonMessage("No hay ahorro con esta tarifa.");
+              setComparisonMessageType('neutral');
+            }
+          } else {
+            setSavingsPerMonth("0,00");
+            setSavingsPerYear("0,00");
+            setComparisonMessage("No hay datos de tarifa disponibles para comparar.");
+            setComparisonMessageType('neutral');
+          }
         } else {
-          // Negative savings (current is cheaper)
           setSavingsPerMonth("0,00");
           setSavingsPerYear("0,00");
-          setComparisonMessage("La tarifa comparada es más cara. Cambio no recomendado.");
-          setComparisonMessageType('negative');
+          setComparisonMessage("No hay datos de tarifa disponibles para comparar.");
+          setComparisonMessageType('neutral');
         }
       } else {
-        setSavingsPerMonth("0,00");
-        setSavingsPerYear("0,00");
-        setComparisonMessage("No hay datos de tarifa disponibles para comparar.");
-        setComparisonMessageType('neutral');
+        // Gas comparison: find cheapest
+        const companiesWithPrices = calculatedCompanies.filter(c => c.pricePerMonth !== null);
+        const precioActual = parseFloat(extractedData.precio_mensual) || null;
+        
+        if (companiesWithPrices.length > 0 && precioActual !== null) {
+          const cheapestCompany = companiesWithPrices.reduce((prev, current) => 
+            (current.pricePerMonth! < prev.pricePerMonth!) ? current : prev
+          );
+
+          const monthlyDiff = precioActual - (cheapestCompany.pricePerMonth || 0);
+
+          if (monthlyDiff > 0.01) {
+            setSavingsPerMonth(formatCurrency(monthlyDiff));
+            setSavingsPerYear(formatCurrency(monthlyDiff * 12));
+            setComparisonMessage(null);
+            setComparisonMessageType('positive');
+          } else if (monthlyDiff < -0.01) {
+            setSavingsPerMonth("0,00");
+            setSavingsPerYear("0,00");
+            setComparisonMessage("La tarifa comparada es más cara. Cambio no recomendado.");
+            setComparisonMessageType('negative');
+          } else {
+            setSavingsPerMonth("0,00");
+            setSavingsPerYear("0,00");
+            setComparisonMessage("No hay ahorro con esta tarifa.");
+            setComparisonMessageType('neutral');
+          }
+        } else {
+          setSavingsPerMonth("0,00");
+          setSavingsPerYear("0,00");
+          setComparisonMessage("No hay datos de tarifa disponibles para comparar.");
+          setComparisonMessageType('neutral');
+        }
       }
 
       setLoading(false);
     };
 
     loadTariffsAndCalculate();
-  }, [extractedData.consumo_kwh, extractedData.precio_mensual, currentCompany, tariffType]);
+  }, [extractedData, currentCompany, tariffType]);
 
   const handleDownloadPDF = async () => {
     try {

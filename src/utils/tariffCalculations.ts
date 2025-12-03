@@ -14,6 +14,21 @@ interface TarifaGas {
   iva: number | null;
 }
 
+// Invoice extracted data for electricity comparison
+export interface ElectricityInvoiceData {
+  days: number;
+  potencia_kw: number;
+  potencia_price: number; // €/kW día
+  consumo_p1_kwh: number;
+  consumo_p2_kwh: number;
+  consumo_p3_kwh: number;
+  energia_p1_price: number; // €/kWh
+  energia_p2_price: number;
+  energia_p3_price: number;
+  impuesto_electrico_pct: number;
+  iva_pct: number;
+}
+
 const DEFAULT_CONTRACTED_POWER = 4.6; // kW
 
 export const calculateMonthlyElectricityPrice = (
@@ -75,6 +90,100 @@ export const calculateMonthlyGasPrice = (
   }
 
   return subtotal;
+};
+
+/**
+ * Calculate CURRENT cost using INVOICE prices
+ */
+export const calculateCurrentElectricityCost = (data: ElectricityInvoiceData): number => {
+  // Power cost from invoice
+  const powerCostCurrent = data.potencia_kw * data.days * data.potencia_price;
+
+  // Energy cost from invoice
+  const energyCostCurrent =
+    (data.consumo_p1_kwh * data.energia_p1_price) +
+    (data.consumo_p2_kwh * data.energia_p2_price) +
+    (data.consumo_p3_kwh * data.energia_p3_price);
+
+  const subtotalCurrent = powerCostCurrent + energyCostCurrent;
+
+  // Apply taxes
+  const taxFactor = 1 + (data.impuesto_electrico_pct / 100);
+  const vatFactor = 1 + (data.iva_pct / 100);
+
+  return subtotalCurrent * taxFactor * vatFactor;
+};
+
+/**
+ * Calculate NEW cost using ADMIN TARIFF prices with same consumption/power from invoice
+ */
+export const calculateNewElectricityCost = (
+  data: ElectricityInvoiceData,
+  adminTarifa: TarifaElectricidad
+): number | null => {
+  // If admin tariff doesn't have energy price, can't calculate
+  if (!adminTarifa.energia_p1) {
+    return null;
+  }
+
+  // Power cost using admin tariff P1
+  const adminPotenciaP1 = adminTarifa.potencia_p1 || 0;
+  const powerCostNew = data.potencia_kw * data.days * adminPotenciaP1;
+
+  // Energy cost using admin tariff prices
+  const adminEnergiaP1 = adminTarifa.energia_p1 || 0;
+  const adminEnergiaP2 = adminTarifa.energia_p2 || 0;
+  const adminEnergiaP3 = adminTarifa.energia_p3 || 0;
+
+  const energyCostNew =
+    (data.consumo_p1_kwh * adminEnergiaP1) +
+    (data.consumo_p2_kwh * adminEnergiaP2) +
+    (data.consumo_p3_kwh * adminEnergiaP3);
+
+  const subtotalNew = powerCostNew + energyCostNew;
+
+  // Apply admin taxes
+  const adminImpuesto = adminTarifa.impuesto_electrico || 5.1127; // default 5.1127%
+  const adminIva = adminTarifa.iva || 21; // default 21%
+
+  const taxFactorNew = 1 + (adminImpuesto / 100);
+  const vatFactorNew = 1 + (adminIva / 100);
+
+  return subtotalNew * taxFactorNew * vatFactorNew;
+};
+
+/**
+ * Compare electricity invoice with admin tariff and return savings
+ */
+export const compareElectricityTariffs = (
+  invoiceData: ElectricityInvoiceData,
+  adminTarifa: TarifaElectricidad
+): { savingsMonth: number; savingsYear: number; totalCurrent: number; totalNew: number | null } => {
+  const totalCurrent = calculateCurrentElectricityCost(invoiceData);
+  const totalNew = calculateNewElectricityCost(invoiceData, adminTarifa);
+
+  if (totalNew === null) {
+    return { savingsMonth: 0, savingsYear: 0, totalCurrent, totalNew: null };
+  }
+
+  const savingsMonth = totalCurrent - totalNew;
+
+  // Treat very small differences as zero (floating point noise)
+  if (savingsMonth > 0.01) {
+    return {
+      savingsMonth,
+      savingsYear: savingsMonth * 12,
+      totalCurrent,
+      totalNew
+    };
+  } else {
+    return {
+      savingsMonth: 0,
+      savingsYear: 0,
+      totalCurrent,
+      totalNew
+    };
+  }
 };
 
 export const formatCurrency = (value: number): string => {
