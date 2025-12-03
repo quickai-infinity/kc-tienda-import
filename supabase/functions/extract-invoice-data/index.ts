@@ -47,6 +47,14 @@ const electricityTool = {
           type: "number",
           description: "Número de días del periodo de facturación"
         },
+        fecha_inicio: {
+          type: "string",
+          description: "Fecha de inicio del periodo de facturación (YYYY-MM-DD)"
+        },
+        fecha_fin: {
+          type: "string",
+          description: "Fecha de fin del periodo de facturación (YYYY-MM-DD)"
+        },
         consumo_p1: {
           type: "number",
           description: "Consumo en periodo P1 (punta) en kWh"
@@ -55,6 +63,10 @@ const electricityTool = {
           type: "number",
           description: "Consumo en periodo P2 (llano) en kWh"
         },
+        consumo_p3: {
+          type: "number",
+          description: "Consumo en periodo P3 (valle) en kWh"
+        },
         energia_p1_price: {
           type: "number",
           description: "Precio energía P1 en €/kWh"
@@ -62,6 +74,18 @@ const electricityTool = {
         energia_p2_price: {
           type: "number",
           description: "Precio energía P2 en €/kWh"
+        },
+        energia_p3_price: {
+          type: "number",
+          description: "Precio energía P3 en €/kWh"
+        },
+        termino_potencia_euros: {
+          type: "number",
+          description: "Importe total del término de potencia en euros"
+        },
+        termino_energia_euros: {
+          type: "number",
+          description: "Importe total del término de energía en euros"
         },
         impuesto_electrico: {
           type: "number",
@@ -130,6 +154,18 @@ const gasTool = {
         precio_mensual: {
           type: "number",
           description: "Precio total de la factura en euros"
+        },
+        fecha_inicio: {
+          type: "string",
+          description: "Fecha de inicio del periodo de facturación"
+        },
+        fecha_fin: {
+          type: "string",
+          description: "Fecha de fin del periodo de facturación"
+        },
+        dias_periodo: {
+          type: "number",
+          description: "Días del periodo de facturación"
         }
       },
       required: ["empresa", "consumo_kwh", "precio_mensual"],
@@ -137,6 +173,143 @@ const gasTool = {
     }
   }
 };
+
+// Helper function to calculate days between two dates
+function calculateDaysBetween(dateStart: string, dateEnd: string): number | null {
+  try {
+    const start = new Date(dateStart);
+    const end = new Date(dateEnd);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : null;
+  } catch {
+    return null;
+  }
+}
+
+// Apply fallback logic for electricity invoices
+function applyElectricityFallbacks(data: any): { data: any; fallbacks: string[] } {
+  const fallbacks: string[] = [];
+
+  // A. DAYS - If missing, calculate from dates or use default 30
+  if (!data.potencia_days || data.potencia_days === null) {
+    if (data.fecha_inicio && data.fecha_fin) {
+      const calculatedDays = calculateDaysBetween(data.fecha_inicio, data.fecha_fin);
+      if (calculatedDays) {
+        data.potencia_days = calculatedDays;
+        fallbacks.push(`Días del periodo calculados de fechas: ${calculatedDays} días`);
+      } else {
+        data.potencia_days = 30;
+        fallbacks.push("Días del periodo: 30 (ciclo estándar por defecto)");
+      }
+    } else {
+      data.potencia_days = 30;
+      fallbacks.push("Días del periodo: 30 (ciclo estándar por defecto)");
+    }
+  }
+
+  // B. POWER (POTENCIA) - Estimate if missing
+  if (!data.potencia_kw || data.potencia_kw === null) {
+    if (data.termino_potencia_euros && data.potencia_price && data.potencia_days) {
+      // potencia = (Término de potencia €) / (precio potencia €/kW·día × days)
+      const estimatedPower = data.termino_potencia_euros / (data.potencia_price * data.potencia_days);
+      if (estimatedPower > 0 && estimatedPower < 50) { // Sanity check
+        data.potencia_kw = Math.round(estimatedPower * 100) / 100;
+        fallbacks.push(`Potencia estimada: ${data.potencia_kw} kW (calculada del término de potencia)`);
+      } else {
+        data.potencia_kw = 4.6; // Common residential power
+        fallbacks.push("Potencia contratada: 4.6 kW (residencial estándar)");
+      }
+    } else {
+      data.potencia_kw = 4.6;
+      fallbacks.push("Potencia contratada: 4.6 kW (residencial estándar)");
+    }
+  }
+
+  // C. POWER PRICE - Set to 0 if missing (don't block calculation)
+  if (!data.potencia_price || data.potencia_price === null) {
+    data.potencia_price = 0;
+    fallbacks.push("Precio potencia: no disponible (se usa 0)");
+  }
+
+  // D. ENERGY PRICE - Calculate from totals if missing
+  if (!data.energia_p1_price || data.energia_p1_price === null) {
+    if (data.termino_energia_euros && data.consumo_kwh && data.consumo_kwh > 0) {
+      data.energia_p1_price = Math.round((data.termino_energia_euros / data.consumo_kwh) * 100000) / 100000;
+      fallbacks.push(`Precio energía P1 calculado: ${data.energia_p1_price} €/kWh (total energía / consumo)`);
+    }
+  }
+
+  // E. ENERGY CONSUMPTION - Use total as P1 if P1/P2/P3 missing
+  if (!data.consumo_p1 || data.consumo_p1 === null) {
+    if (data.consumo_kwh) {
+      data.consumo_p1 = data.consumo_kwh;
+      fallbacks.push(`Consumo P1 = consumo total: ${data.consumo_kwh} kWh`);
+    }
+  }
+
+  // F. ELECTRICITY TAX - Default 5.1127%
+  if (!data.impuesto_electrico || data.impuesto_electrico === null) {
+    data.impuesto_electrico = 5.1127;
+    fallbacks.push("Impuesto eléctrico: 5.1127% (por defecto)");
+  }
+
+  // G. IVA - Default 21%
+  if (!data.iva || data.iva === null) {
+    data.iva = 21;
+    fallbacks.push("IVA: 21% (por defecto)");
+  }
+
+  return { data, fallbacks };
+}
+
+// Apply fallback logic for gas invoices
+function applyGasFallbacks(data: any): { data: any; fallbacks: string[] } {
+  const fallbacks: string[] = [];
+
+  // Calculate days from dates if not present
+  if (!data.dias_periodo || data.dias_periodo === null) {
+    if (data.fecha_inicio && data.fecha_fin) {
+      const calculatedDays = calculateDaysBetween(data.fecha_inicio, data.fecha_fin);
+      if (calculatedDays) {
+        data.dias_periodo = calculatedDays;
+        fallbacks.push(`Días del periodo calculados: ${calculatedDays} días`);
+      } else {
+        data.dias_periodo = 30;
+        fallbacks.push("Días del periodo: 30 (por defecto)");
+      }
+    } else {
+      data.dias_periodo = 30;
+      fallbacks.push("Días del periodo: 30 (por defecto)");
+    }
+  }
+
+  // Calculate consumption in m3 if we have readings
+  if (data.lectura_actual && data.lectura_anterior && (!data.consumo_m3 || data.consumo_m3 === null)) {
+    data.consumo_m3 = data.lectura_actual - data.lectura_anterior;
+    fallbacks.push(`Consumo m³ calculado: ${data.consumo_m3} m³ (lectura actual - anterior)`);
+  }
+
+  // Default conversion factor if not found
+  if (!data.factor_conversion || data.factor_conversion === null) {
+    data.factor_conversion = 11.0;
+    fallbacks.push("Factor conversión: 11.0 kWh/m³ (por defecto)");
+  }
+
+  // Calculate consumption in kWh if we have m3 and conversion factor
+  if (data.consumo_m3 && data.factor_conversion && (!data.consumo_kwh || data.consumo_kwh === null)) {
+    data.consumo_kwh = data.consumo_m3 * data.factor_conversion;
+    fallbacks.push(`Consumo kWh calculado: ${data.consumo_kwh} kWh (m³ × factor conversión)`);
+  }
+
+  // Default IVA if not found
+  if (!data.iva || data.iva === null) {
+    data.iva = 21;
+    fallbacks.push("IVA: 21% (por defecto)");
+  }
+
+  return { data, fallbacks };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -233,19 +406,32 @@ CAMPOS PRINCIPALES:
 - Tarifa actual (nombre de la tarifa contratada)
 - CUPS (Código Universal del Punto de Suministro - 20-22 caracteres alfanuméricos)
 - Empresa proveedora
-- Precio mensual total en euros
-- Potencia contratada en kW
+- Precio total mensual en euros (importe total factura)
+- Potencia contratada en kW (busca en "Datos del contrato", "Término de potencia", "Potencia contratada")
 
-CAMPOS ADICIONALES PARA VALIDACIÓN (si están disponibles):
-- Precio del término de potencia (€/kW/día)
+CAMPOS DE FECHAS:
+- Fecha de inicio del periodo de facturación (formato YYYY-MM-DD)
+- Fecha de fin del periodo de facturación (formato YYYY-MM-DD)
 - Número de días del periodo de facturación
+
+CAMPOS DE POTENCIA:
+- Precio del término de potencia (€/kW/día)
+- Importe total del término de potencia en euros
+
+CAMPOS DE CONSUMO Y ENERGÍA:
 - Consumo en periodo P1 (punta) en kWh
 - Consumo en periodo P2 (llano) en kWh
+- Consumo en periodo P3 (valle) en kWh
 - Precio energía P1 (€/kWh)
 - Precio energía P2 (€/kWh)
+- Precio energía P3 (€/kWh)
+- Importe total del término de energía en euros
+
+IMPUESTOS:
 - Porcentaje del impuesto eléctrico (normalmente 5.11%)
 - Porcentaje de IVA (normalmente 21%)
 
+Si la factura solo muestra consumo total sin desglose P1/P2/P3, usa el consumo total como P1.
 Si no encuentras algún dato, devuelve null para ese campo.`;
 
     const gasPrompt = `Analiza esta factura de GAS NATURAL española y extrae la siguiente información específica de gas:
@@ -262,6 +448,11 @@ CAMPOS REQUERIDOS:
 - Consumo en m3 (diferencia entre lecturas o valor indicado)
 - Consumo en kWh (m3 × factor conversión o valor indicado)
 - Precio total de la factura en euros
+
+CAMPOS DE FECHAS:
+- Fecha de inicio del periodo de facturación
+- Fecha de fin del periodo de facturación
+- Días del periodo de facturación
 
 IMPORTANTE: 
 - Busca palabras clave de gas: "m3", "metros cúbicos", "kWh/m3", "gas natural", "término fijo gas", "término variable gas"
@@ -355,10 +546,38 @@ IMPORTANTE:
       );
     }
 
-    const extractedData = JSON.parse(toolCall.function.arguments);
-    console.log("Extracted data:", extractedData);
+    let extractedData = JSON.parse(toolCall.function.arguments);
+    console.log("Raw extracted data:", extractedData);
 
-    // Validation for electricity invoices only
+    // Store detected fields before applying fallbacks
+    const detectedFields: string[] = [];
+    const checkFields = isGas 
+      ? ['empresa', 'consumo_kwh', 'consumo_m3', 'termino_fijo', 'termino_variable', 'lectura_anterior', 'lectura_actual', 'factor_conversion', 'iva', 'precio_mensual', 'tarifa_atr']
+      : ['empresa', 'consumo_kwh', 'potencia_kw', 'potencia_price', 'potencia_days', 'consumo_p1', 'consumo_p2', 'energia_p1_price', 'energia_p2_price', 'impuesto_electrico', 'iva', 'precio_mensual'];
+    
+    for (const field of checkFields) {
+      if (extractedData[field] !== null && extractedData[field] !== undefined) {
+        detectedFields.push(field);
+      }
+    }
+
+    // Apply fallback logic based on invoice type
+    let fallbacks: string[] = [];
+    if (isGas) {
+      const result = applyGasFallbacks(extractedData);
+      extractedData = result.data;
+      fallbacks = result.fallbacks;
+    } else {
+      const result = applyElectricityFallbacks(extractedData);
+      extractedData = result.data;
+      fallbacks = result.fallbacks;
+    }
+
+    console.log("Processed extracted data:", extractedData);
+    console.log("Detected fields:", detectedFields);
+    console.log("Fallbacks applied:", fallbacks);
+
+    // Validation warning for electricity invoices (informational only)
     let validationWarning: string | null = null;
     if (!isGas) {
       const requiredElectricityFields = [
@@ -370,36 +589,13 @@ IMPORTANTE:
         'iva'
       ];
       
-      const missingFields = requiredElectricityFields.filter(field => 
-        extractedData[field] === null || extractedData[field] === undefined
+      const originalMissing = requiredElectricityFields.filter(field => 
+        !detectedFields.includes(field)
       );
       
-      if (missingFields.length > 0) {
-        console.log("Electricity validation warning - missing fields:", missingFields);
-        validationWarning = "Revisa los datos extraídos. Algunos campos no coinciden con una factura eléctrica estándar.";
-      }
-    }
-
-    // For gas invoices, calculate derived fields if not present
-    if (isGas) {
-      // Calculate consumption in m3 if we have readings
-      if (extractedData.lectura_actual && extractedData.lectura_anterior && !extractedData.consumo_m3) {
-        extractedData.consumo_m3 = extractedData.lectura_actual - extractedData.lectura_anterior;
-      }
-      
-      // Calculate consumption in kWh if we have m3 and conversion factor
-      if (extractedData.consumo_m3 && extractedData.factor_conversion && !extractedData.consumo_kwh) {
-        extractedData.consumo_kwh = extractedData.consumo_m3 * extractedData.factor_conversion;
-      }
-      
-      // Default IVA if not found
-      if (!extractedData.iva) {
-        extractedData.iva = 21;
-      }
-      
-      // Default conversion factor if not found
-      if (!extractedData.factor_conversion) {
-        extractedData.factor_conversion = 11.0;
+      if (originalMissing.length > 0) {
+        console.log("Electricity validation warning - originally missing fields:", originalMissing);
+        validationWarning = "Algunos campos fueron estimados usando valores por defecto.";
       }
     }
 
@@ -408,7 +604,9 @@ IMPORTANTE:
         success: true,
         data: extractedData,
         tariffType: tariffType,
-        validationWarning: validationWarning
+        validationWarning: validationWarning,
+        detectedFields: detectedFields,
+        fallbacksApplied: fallbacks
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
