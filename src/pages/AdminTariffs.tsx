@@ -64,6 +64,13 @@ interface TarifaGas {
   iva: number | null;
 }
 
+// String state for gas input fields (allows comma/period)
+interface TarifaGasInput {
+  termino_fijo: string;
+  termino_variable: string;
+  iva: string;
+}
+
 interface ServicioAdicional {
   id?: string;
   empresa_id: string;
@@ -109,6 +116,13 @@ const AdminTariffs = () => {
     termino_variable: null,
     tarifa_atr: null,
     iva: null,
+  });
+
+  // String inputs for gas tariff (allows comma/period entry)
+  const [tarifaGasInput, setTarifaGasInput] = useState<TarifaGasInput>({
+    termino_fijo: "",
+    termino_variable: "",
+    iva: "",
   });
 
   const [servicios, setServicios] = useState<ServicioAdicional[]>([]);
@@ -198,6 +212,11 @@ const AdminTariffs = () => {
 
     if (gasData) {
       setTarifaGas(gasData);
+      setTarifaGasInput({
+        termino_fijo: numberToInputString(gasData.termino_fijo),
+        termino_variable: numberToInputString(gasData.termino_variable),
+        iva: numberToInputString(gasData.iva),
+      });
     } else {
       setTarifaGas({
         empresa_id: empresaId,
@@ -205,6 +224,11 @@ const AdminTariffs = () => {
         termino_variable: null,
         tarifa_atr: null,
         iva: null,
+      });
+      setTarifaGasInput({
+        termino_fijo: "",
+        termino_variable: "",
+        iva: "",
       });
     }
 
@@ -286,12 +310,19 @@ const AdminTariffs = () => {
   };
 
   const handleSaveGas = async () => {
+    // Convert string inputs to numbers before saving
+    const dataToSave = {
+      id: tarifaGas.id,
+      empresa_id: selectedEmpresaId,
+      termino_fijo: parseInputToNumber(tarifaGasInput.termino_fijo),
+      termino_variable: parseInputToNumber(tarifaGasInput.termino_variable),
+      tarifa_atr: tarifaGas.tarifa_atr,
+      iva: parseInputToNumber(tarifaGasInput.iva),
+    };
+
     const { error } = await supabase
       .from("tarifas_gas")
-      .upsert({
-        ...tarifaGas,
-        empresa_id: selectedEmpresaId,
-      });
+      .upsert(dataToSave);
 
     if (error) {
       toast({ title: "Error", description: "Error al guardar tarifa de gas", variant: "destructive" });
@@ -537,21 +568,23 @@ const AdminTariffs = () => {
                   <div>
                     <Label className="text-white">Término Fijo (€/mes)</Label>
                     <Input
-                      type="number"
-                      step="0.00001"
-                      value={tarifaGas.termino_fijo || ""}
-                      onChange={(e) => setTarifaGas({ ...tarifaGas, termino_fijo: parseFloat(e.target.value) || null })}
+                      type="text"
+                      inputMode="decimal"
+                      value={tarifaGasInput.termino_fijo}
+                      onChange={(e) => setTarifaGasInput({ ...tarifaGasInput, termino_fijo: e.target.value })}
                       className="bg-[#00404A] text-white border-white/20"
+                      placeholder="0,00"
                     />
                   </div>
                   <div>
                     <Label className="text-white">Término Variable (€/kWh)</Label>
                     <Input
-                      type="number"
-                      step="0.00001"
-                      value={tarifaGas.termino_variable || ""}
-                      onChange={(e) => setTarifaGas({ ...tarifaGas, termino_variable: parseFloat(e.target.value) || null })}
+                      type="text"
+                      inputMode="decimal"
+                      value={tarifaGasInput.termino_variable}
+                      onChange={(e) => setTarifaGasInput({ ...tarifaGasInput, termino_variable: e.target.value })}
                       className="bg-[#00404A] text-white border-white/20"
+                      placeholder="0,00001"
                     />
                   </div>
                   <div>
@@ -570,11 +603,12 @@ const AdminTariffs = () => {
                   <div>
                     <Label className="text-white">IVA Gas (%)</Label>
                     <Input
-                      type="number"
-                      step="0.01"
-                      value={tarifaGas.iva || ""}
-                      onChange={(e) => setTarifaGas({ ...tarifaGas, iva: parseFloat(e.target.value) || null })}
+                      type="text"
+                      inputMode="decimal"
+                      value={tarifaGasInput.iva}
+                      onChange={(e) => setTarifaGasInput({ ...tarifaGasInput, iva: e.target.value })}
                       className="bg-[#00404A] text-white border-white/20"
+                      placeholder="0,00"
                     />
                   </div>
                 </div>
