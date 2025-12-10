@@ -30,6 +30,7 @@ import {
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import ManualInvoiceForm from "@/components/ManualInvoiceForm";
+import WebcamCaptureModal from "@/components/WebcamCaptureModal";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -43,10 +44,14 @@ const Index = () => {
   const [tariffType, setTariffType] = useState<"electricity" | "gas" | "manual">("electricity");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
+  const [showWebcamModal, setShowWebcamModal] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // Detect if running on Windows desktop
+  const isWindows = typeof navigator !== 'undefined' && navigator.userAgent.includes("Windows");
 
   const companies = [
     "Endesa",
@@ -270,7 +275,17 @@ const Index = () => {
   };
 
   const handleCameraClick = () => {
-    cameraInputRef.current?.click();
+    if (isWindows) {
+      // On Windows, open webcam modal
+      setShowWebcamModal(true);
+    } else {
+      // On mobile, use native camera input
+      cameraInputRef.current?.click();
+    }
+  };
+
+  const handleWebcamCapture = (file: File) => {
+    handleFileSelect(file);
   };
 
   if (loading) {
@@ -728,6 +743,13 @@ const Index = () => {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Webcam Capture Modal for Windows */}
+      <WebcamCaptureModal
+        open={showWebcamModal}
+        onClose={() => setShowWebcamModal(false)}
+        onCapture={handleWebcamCapture}
+      />
     </div>
   );
 };
