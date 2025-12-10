@@ -17,6 +17,7 @@ interface WebcamCaptureModalProps {
 const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,9 +25,10 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
 
   useEffect(() => {
     if (open) {
-      // Stop previous stream before starting new one
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      // Stop previous stream using ref (always has current value)
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
         setStream(null);
       }
       startCamera();
@@ -52,6 +54,7 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
         }
       });
       
+      streamRef.current = mediaStream;
       setStream(mediaStream);
       
       if (videoRef.current) {
@@ -69,10 +72,11 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
   };
 
   const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
+    setStream(null);
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
