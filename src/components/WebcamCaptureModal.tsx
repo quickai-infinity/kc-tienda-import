@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Camera } from "lucide-react";
+import { X, Camera, SwitchCamera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,6 +20,7 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
 
   useEffect(() => {
     if (open) {
@@ -31,7 +32,7 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
     return () => {
       stopCamera();
     };
-  }, [open]);
+  }, [open, facingMode]);
 
   const startCamera = async () => {
     setIsLoading(true);
@@ -40,7 +41,7 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: "environment",
+          facingMode: facingMode,
           width: { ideal: 1920 },
           height: { ideal: 1080 }
         }
@@ -108,6 +109,10 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
     onClose();
   };
 
+  const toggleCamera = () => {
+    setFacingMode(prev => prev === "environment" ? "user" : "environment");
+  };
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-black">
@@ -150,7 +155,16 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
           <canvas ref={canvasRef} className="hidden" />
         </div>
 
-        <div className="p-4 bg-gradient-to-t from-black/80 to-transparent absolute bottom-0 left-0 right-0 flex justify-center">
+        <div className="p-4 bg-gradient-to-t from-black/80 to-transparent absolute bottom-0 left-0 right-0 flex justify-center items-center gap-6">
+          <Button
+            onClick={toggleCamera}
+            disabled={isLoading || !!error}
+            variant="ghost"
+            size="icon"
+            className="rounded-full w-12 h-12 bg-white/20 hover:bg-white/30 text-white"
+          >
+            <SwitchCamera className="h-6 w-6" />
+          </Button>
           <Button
             onClick={handleCapture}
             disabled={isLoading || !!error}
@@ -158,6 +172,7 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
           >
             <Camera className="h-8 w-8" />
           </Button>
+          <div className="w-12 h-12" /> {/* Spacer for symmetry */}
         </div>
       </DialogContent>
     </Dialog>
