@@ -18,20 +18,29 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
+
+  // Get list of available cameras
+  const getCameras = async () => {
+    try {
+      // First request permission to access cameras
+      await navigator.mediaDevices.getUserMedia({ video: true });
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      setCameras(videoDevices);
+      return videoDevices;
+    } catch (err) {
+      console.error("Error getting cameras:", err);
+      return [];
+    }
+  };
 
   useEffect(() => {
     if (open) {
-      // Stop previous stream using ref (always has current value)
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-        setStream(null);
-      }
-      startCamera();
+      initCamera();
     } else {
       stopCamera();
     }
@@ -39,23 +48,50 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
     return () => {
       stopCamera();
     };
-  }, [open, facingMode]);
+  }, [open]);
 
-  const startCamera = async () => {
+  // Effect for switching cameras
+  useEffect(() => {
+    if (open && cameras.length > 0) {
+      startCameraWithDevice(cameras[currentCameraIndex]?.deviceId);
+    }
+  }, [currentCameraIndex, cameras]);
+
+  const initCamera = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    const availableCameras = await getCameras();
+    if (availableCameras.length === 0) {
+      setError("No se encontraron cámaras disponibles.");
+      setIsLoading(false);
+      return;
+    }
+    
+    // Start with first camera
+    await startCameraWithDevice(availableCameras[0]?.deviceId);
+  };
+
+  const startCameraWithDevice = async (deviceId?: string) => {
+    // Stop any existing stream first
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
     setIsLoading(true);
     setError(null);
     
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: facingMode,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        }
-      });
+      const constraints: MediaStreamConstraints = {
+        video: deviceId 
+          ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+          : { width: { ideal: 1920 }, height: { ideal: 1080 } }
+      };
+      
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       
       streamRef.current = mediaStream;
-      setStream(mediaStream);
       
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -76,7 +112,6 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
-    setStream(null);
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
@@ -119,8 +154,11 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
   };
 
   const toggleCamera = () => {
-    setFacingMode(prev => prev === "environment" ? "user" : "environment");
+    if (cameras.length <= 1) return;
+    setCurrentCameraIndex(prev => (prev + 1) % cameras.length);
   };
+
+  const hasMultipleCameras = cameras.length > 1;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
@@ -165,15 +203,19 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
         </div>
 
         <div className="p-4 bg-gradient-to-t from-black/80 to-transparent absolute bottom-0 left-0 right-0 flex justify-center items-center gap-6">
-          <Button
-            onClick={toggleCamera}
-            disabled={isLoading || !!error}
-            variant="ghost"
-            size="icon"
-            className="rounded-full w-12 h-12 bg-white/20 hover:bg-white/30 text-white"
-          >
-            <SwitchCamera className="h-6 w-6" />
-          </Button>
+          {hasMultipleCameras ? (
+            <Button
+              onClick={toggleCamera}
+              disabled={isLoading || !!error}
+              variant="ghost"
+              size="icon"
+              className="rounded-full w-12 h-12 bg-white/20 hover:bg-white/30 text-white"
+            >
+              <SwitchCamera className="h-6 w-6" />
+            </Button>
+          ) : (
+            <div className="w-12 h-12" /> /* Spacer when no switch available */
+          )}
           <Button
             onClick={handleCapture}
             disabled={isLoading || !!error}
