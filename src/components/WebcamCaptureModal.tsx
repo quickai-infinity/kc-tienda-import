@@ -24,6 +24,11 @@ const WebcamCaptureModal = ({ open, onClose, onCapture }: WebcamCaptureModalProp
 
   useEffect(() => {
     if (open) {
+      // Stop previous stream before starting new one
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+      }
       startCamera();
     } else {
       stopCamera();
