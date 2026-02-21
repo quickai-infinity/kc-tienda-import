@@ -1,4 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+<img
+  src="/logo.png"
+  alt="ToolsLabs"
+  style={{ height: 44, width: "auto", display: "block", margin: "0 auto 16px" }}
+/>import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Upload, Camera, Settings, Menu, X, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";

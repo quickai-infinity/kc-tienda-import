@@ -1,3 +1,4 @@
+import logo from "./assets/logo.png";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -29,6 +30,14 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <BrandingProvider>
+  <TooltipProvider>
+    <Toaster />
+    <Sonner />
+    <div style={{ padding: "20px", textAlign: "center" }}>
+      <img src={logo} alt="Logo" width="140" />
+    </div>
+    <BrowserRouter>
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
