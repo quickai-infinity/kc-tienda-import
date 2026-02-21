@@ -30,14 +30,6 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrandingProvider>
-  <TooltipProvider>
-    <Toaster />
-    <Sonner />
-    <div style={{ padding: "20px", textAlign: "center" }}>
-      <img src={logo} alt="Logo" width="140" />
-    </div>
-    <BrowserRouter>
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
