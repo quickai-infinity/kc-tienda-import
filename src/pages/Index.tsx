@@ -1,7 +1,6 @@
-
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Upload, Camera, Settings, Menu, X, FileText } from "lucide-react";
+import { Upload, Camera, Settings, Menu, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -42,7 +41,9 @@ const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userApproved, setUserApproved] = useState<boolean | null>(null);
   const [compareCompany, setCompareCompany] = useState<string>("");
-  const [tariffType, setTariffType] = useState<"electricity" | "gas" | "manual">("electricity");
+  const [tariffType, setTariffType] = useState<"electricity" | "gas" | "manual">(
+    "electricity"
+  );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
   const [showWebcamModal, setShowWebcamModal] = useState(false);
@@ -52,7 +53,8 @@ const Index = () => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Detect if running on Windows desktop
-  const isWindows = typeof navigator !== 'undefined' && navigator.userAgent.includes("Windows");
+  const isWindows =
+    typeof navigator !== "undefined" && navigator.userAgent.includes("Windows");
 
   const companies = [
     "Endesa",
@@ -67,16 +69,18 @@ const Index = () => {
 
   useEffect(() => {
     const checkUserApproval = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
           .select("approved")
           .eq("user_id", user.id)
           .single();
-        
+
         setUserApproved(profile?.approved || false);
-        
+
         if (profile && !profile.approved) {
           navigate("/pending-approval");
         }
@@ -86,15 +90,19 @@ const Index = () => {
     };
 
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
       await checkUserApproval();
       setLoading(false);
     };
-    
+
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session);
       if (session?.user) {
         // Defer Supabase calls to prevent deadlock
@@ -120,10 +128,13 @@ const Index = () => {
       setShowInstallPrompt(true);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt
+      );
     };
   }, []);
 
@@ -135,7 +146,7 @@ const Index = () => {
 
     // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
-    
+
     console.log(`User response to the install prompt: ${outcome}`);
 
     // Clear the deferredPrompt
@@ -157,13 +168,22 @@ const Index = () => {
         description: "Debes iniciar sesión para subir facturas",
         variant: "destructive",
       });
-      navigate('/login');
+      navigate("/login");
       return;
     }
 
     // Validate file type
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/heic'];
-    if (!validTypes.includes(file.type) && !file.name.match(/\.(pdf|jpg|jpeg|png|heic)$/i)) {
+    const validTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/heic",
+    ];
+    if (
+      !validTypes.includes(file.type) &&
+      !file.name.match(/\.(pdf|jpg|jpeg|png|heic)$/i)
+    ) {
       toast({
         title: "Archivo no válido",
         description: "Solo se permiten archivos PDF o imágenes (JPG, PNG)",
@@ -173,12 +193,14 @@ const Index = () => {
     }
 
     // Validate file size (max 10MB for camera photos, 15MB for PDFs)
-    const maxSize = file.type.startsWith('image/') ? 10 * 1024 * 1024 : 15 * 1024 * 1024;
+    const maxSize = file.type.startsWith("image/")
+      ? 10 * 1024 * 1024
+      : 15 * 1024 * 1024;
     if (file.size > maxSize) {
       toast({
         title: "Archivo muy grande",
-        description: file.type.startsWith('image/') 
-          ? "La foto no debe superar los 10MB" 
+        description: file.type.startsWith("image/")
+          ? "La foto no debe superar los 10MB"
           : "El archivo no debe superar los 15MB",
         variant: "destructive",
       });
@@ -187,13 +209,21 @@ const Index = () => {
 
     // ALWAYS compress images for Android memory optimization
     let processedFile = file;
-    if (file.type.startsWith('image/')) {
+    if (file.type.startsWith("image/")) {
       try {
-        console.log('Original image size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+        console.log(
+          "Original image size:",
+          (file.size / 1024 / 1024).toFixed(2),
+          "MB"
+        );
         processedFile = await compressImage(file);
-        console.log('Compressed image size:', (processedFile.size / 1024 / 1024).toFixed(2), 'MB');
+        console.log(
+          "Compressed image size:",
+          (processedFile.size / 1024 / 1024).toFixed(2),
+          "MB"
+        );
       } catch (error) {
-        console.error('Error compressing image:', error);
+        console.error("Error compressing image:", error);
         toast({
           title: "Error al comprimir imagen",
           description: "No se pudo optimizar la imagen. Intenta con otra foto.",
@@ -203,15 +233,18 @@ const Index = () => {
       }
     }
 
-    // Navigate to processing with the file
-    // Use active company from branding as currentCompany
     // Save selected company to localStorage for persistence (PWA on Android)
-    localStorage.setItem('selectedCompany', compareCompany);
-    localStorage.setItem('tariffType', tariffType);
-    
-    console.log('Saving to localStorage:', { selectedCompany: compareCompany, tariffType });
-    
-    navigate('/processing', { state: { file: processedFile, selectedCompany: compareCompany, tariffType } });
+    localStorage.setItem("selectedCompany", compareCompany);
+    localStorage.setItem("tariffType", tariffType);
+
+    console.log("Saving to localStorage:", {
+      selectedCompany: compareCompany,
+      tariffType,
+    });
+
+    navigate("/processing", {
+      state: { file: processedFile, selectedCompany: compareCompany, tariffType },
+    });
   };
 
   // Helper function to compress images aggressively for mobile
@@ -219,16 +252,16 @@ const Index = () => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      
+
       reader.onload = (event) => {
         const img = new Image();
         img.src = event.target?.result as string;
-        
+
         img.onload = () => {
-          const canvas = document.createElement('canvas');
+          const canvas = document.createElement("canvas");
           let width = img.width;
           let height = img.height;
-          
+
           // Resize to smaller size for mobile memory optimization (max 1280px)
           const maxSize = 1280;
           if (width > maxSize || height > maxSize) {
@@ -240,34 +273,34 @@ const Index = () => {
               height = maxSize;
             }
           }
-          
+
           canvas.width = width;
           canvas.height = height;
-          
-          const ctx = canvas.getContext('2d');
+
+          const ctx = canvas.getContext("2d");
           ctx?.drawImage(img, 0, 0, width, height);
-          
+
           canvas.toBlob(
             (blob) => {
               if (blob) {
                 const compressedFile = new File([blob], file.name, {
-                  type: 'image/jpeg',
+                  type: "image/jpeg",
                   lastModified: Date.now(),
                 });
                 resolve(compressedFile);
               } else {
-                reject(new Error('Failed to compress image'));
+                reject(new Error("Failed to compress image"));
               }
             },
-            'image/jpeg',
-            0.70 // Lower quality for better memory usage (70%)
+            "image/jpeg",
+            0.7 // Lower quality for better memory usage (70%)
           );
         };
-        
-        img.onerror = () => reject(new Error('Failed to load image'));
+
+        img.onerror = () => reject(new Error("Failed to load image"));
       };
-      
-      reader.onerror = () => reject(new Error('Failed to read file'));
+
+      reader.onerror = () => reject(new Error("Failed to read file"));
     });
   };
 
@@ -298,11 +331,14 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-4 relative" style={{ 
-      background: companyBranding?.background_color 
-        ? `linear-gradient(to bottom, ${companyBranding.background_color}, ${companyBranding.background_color})`
-        : 'linear-gradient(to bottom, #003942, #002F36)'
-    }}>
+    <div
+      className="min-h-screen flex flex-col px-4 relative"
+      style={{
+        background: companyBranding?.background_color
+          ? `linear-gradient(to bottom, ${companyBranding.background_color}, ${companyBranding.background_color})`
+          : "linear-gradient(to bottom, #003942, #002F36)",
+      }}
+    >
       {/* Hidden file inputs */}
       <input
         ref={fileInputRef}
@@ -327,10 +363,10 @@ const Index = () => {
       />
 
       {/* Top navigation - Desktop: visible buttons, Mobile: hamburger menu */}
-      <div 
+      <div
         className="absolute right-4 flex items-center gap-4 z-10"
         style={{
-          top: 'max(env(safe-area-inset-top, 0px) + 1.5rem, 1.5rem)'
+          top: "max(env(safe-area-inset-top, 0px) + 1.5rem, 1.5rem)",
         }}
       >
         {/* Desktop Navigation - Hidden on mobile */}
@@ -338,19 +374,19 @@ const Index = () => {
           {!isAuthenticated ? (
             <>
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate("/login")}
                 className="px-4 py-2 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg hover:bg-black/30"
                 style={{
-                  color: companyBranding?.text_color || '#FFFFFF'
+                  color: companyBranding?.text_color || "#FFFFFF",
                 }}
               >
                 Iniciar sesión
               </button>
               <button
-                onClick={() => navigate('/register')}
+                onClick={() => navigate("/register")}
                 className="px-4 py-2 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg hover:bg-black/30"
                 style={{
-                  color: companyBranding?.text_color || '#FFFFFF'
+                  color: companyBranding?.text_color || "#FFFFFF",
                 }}
               >
                 Registrarse
@@ -361,19 +397,19 @@ const Index = () => {
               {isSuperAdmin && (
                 <>
                   <button
-                    onClick={() => navigate('/settings')}
+                    onClick={() => navigate("/settings")}
                     className="transition-colors backdrop-blur-sm bg-black/20 rounded-lg p-2 hover:bg-black/30"
                     style={{
-                      color: companyBranding?.text_color || '#FFFFFF'
+                      color: companyBranding?.text_color || "#FFFFFF",
                     }}
                   >
                     <Settings className="h-6 w-6" />
                   </button>
                   <button
-                    onClick={() => navigate('/admin/users')}
+                    onClick={() => navigate("/admin/users")}
                     className="px-3 py-1.5 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg hover:bg-black/30"
                     style={{
-                      color: companyBranding?.text_color || '#FFFFFF'
+                      color: companyBranding?.text_color || "#FFFFFF",
                     }}
                   >
                     Gestión de usuarios
@@ -381,10 +417,10 @@ const Index = () => {
                 </>
               )}
               <button
-                onClick={() => navigate('/admin/tariffs')}
+                onClick={() => navigate("/admin/tariffs")}
                 className="px-3 py-1.5 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg hover:bg-black/30"
                 style={{
-                  color: companyBranding?.text_color || '#FFFFFF'
+                  color: companyBranding?.text_color || "#FFFFFF",
                 }}
               >
                 Edición de tarifas
@@ -392,11 +428,11 @@ const Index = () => {
               <button
                 onClick={async () => {
                   await supabase.auth.signOut();
-                  navigate('/');
+                  navigate("/");
                 }}
                 className="px-3 py-1.5 text-sm font-medium transition-colors backdrop-blur-sm bg-black/20 rounded-lg hover:bg-black/30"
                 style={{
-                  color: companyBranding?.text_color || '#FFFFFF'
+                  color: companyBranding?.text_color || "#FFFFFF",
                 }}
               >
                 Cerrar sesión
@@ -411,40 +447,40 @@ const Index = () => {
             <button
               className="md:hidden backdrop-blur-sm bg-black/20 rounded-lg p-2 hover:bg-black/30 transition-colors"
               style={{
-                color: companyBranding?.text_color || '#FFFFFF'
+                color: companyBranding?.text_color || "#FFFFFF",
               }}
             >
               <Menu className="h-6 w-6" />
             </button>
           </SheetTrigger>
-          <SheetContent 
-            side="right" 
+          <SheetContent
+            side="right"
             className="w-[280px] sm:w-[350px]"
-            style={{ 
-              background: companyBranding?.background_color || '#003942',
-              borderLeft: '1px solid rgba(255, 255, 255, 0.1)'
+            style={{
+              background: companyBranding?.background_color || "#003942",
+              borderLeft: "1px solid rgba(255, 255, 255, 0.1)",
             }}
           >
             <SheetHeader>
-              <SheetTitle 
+              <SheetTitle
                 className="text-left"
-                style={{ color: companyBranding?.text_color || '#FFFFFF' }}
+                style={{ color: companyBranding?.text_color || "#FFFFFF" }}
               >
                 Menú
               </SheetTitle>
             </SheetHeader>
-            
+
             <div className="flex flex-col gap-4 mt-8">
               {!isAuthenticated ? (
                 <>
                   <button
                     onClick={() => {
                       setMobileMenuOpen(false);
-                      navigate('/login');
+                      navigate("/login");
                     }}
                     className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20"
                     style={{
-                      color: companyBranding?.text_color || '#FFFFFF'
+                      color: companyBranding?.text_color || "#FFFFFF",
                     }}
                   >
                     Iniciar sesión
@@ -452,11 +488,11 @@ const Index = () => {
                   <button
                     onClick={() => {
                       setMobileMenuOpen(false);
-                      navigate('/register');
+                      navigate("/register");
                     }}
                     className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20"
                     style={{
-                      color: companyBranding?.text_color || '#FFFFFF'
+                      color: companyBranding?.text_color || "#FFFFFF",
                     }}
                   >
                     Registrarse
@@ -469,11 +505,11 @@ const Index = () => {
                       <button
                         onClick={() => {
                           setMobileMenuOpen(false);
-                          navigate('/settings');
+                          navigate("/settings");
                         }}
                         className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20 flex items-center gap-3"
                         style={{
-                          color: companyBranding?.text_color || '#FFFFFF'
+                          color: companyBranding?.text_color || "#FFFFFF",
                         }}
                       >
                         <Settings className="h-5 w-5" />
@@ -482,11 +518,11 @@ const Index = () => {
                       <button
                         onClick={() => {
                           setMobileMenuOpen(false);
-                          navigate('/admin/users');
+                          navigate("/admin/users");
                         }}
                         className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20"
                         style={{
-                          color: companyBranding?.text_color || '#FFFFFF'
+                          color: companyBranding?.text_color || "#FFFFFF",
                         }}
                       >
                         Gestión de usuarios
@@ -496,11 +532,11 @@ const Index = () => {
                   <button
                     onClick={() => {
                       setMobileMenuOpen(false);
-                      navigate('/admin/tariffs');
+                      navigate("/admin/tariffs");
                     }}
                     className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20"
                     style={{
-                      color: companyBranding?.text_color || '#FFFFFF'
+                      color: companyBranding?.text_color || "#FFFFFF",
                     }}
                   >
                     Edición de tarifas
@@ -509,11 +545,11 @@ const Index = () => {
                     onClick={async () => {
                       setMobileMenuOpen(false);
                       await supabase.auth.signOut();
-                      navigate('/');
+                      navigate("/");
                     }}
                     className="w-full px-4 py-3 text-left text-base font-medium transition-colors rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20"
                     style={{
-                      color: companyBranding?.text_color || '#FFFFFF'
+                      color: companyBranding?.text_color || "#FFFFFF",
                     }}
                   >
                     Cerrar sesión
@@ -525,27 +561,31 @@ const Index = () => {
         </Sheet>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center" style={{
-        paddingTop: 'max(env(safe-area-inset-top, 0px) + 4rem, 4rem)'
-      }}>
+      <div
+        className="flex-1 flex flex-col items-center justify-center"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top, 0px) + 4rem, 4rem)",
+        }}
+      >
         <div className="max-w-md w-full space-y-8 text-center">
-          {/* Logo centrado arriba - más espacio superior en móviles con notch */}
-          {(companyBranding?.logo_url || branding?.logo_url) && (
-            <div className="flex justify-center mb-8 mt-4">
-              <img 
-                src={companyBranding?.logo_url || branding?.logo_url || ""} 
-                alt={companyBranding?.company_name || branding?.app_name || "Logo"} 
-                className="w-40 h-auto object-contain"
-              />
-            </div>
-          )}
+          {/* LOGO: SIEMPRE visible desde /public/logo.png */}
+          <div className="flex justify-center mb-8 mt-4">
+            <img
+              src="/logo.png"
+              alt="ToolsLabs"
+              className="w-40 h-auto object-contain"
+            />
+          </div>
 
           {/* Compare with selector */}
           <div className="space-y-4 mb-8">
             <div className="space-y-2">
-              <label className="text-sm font-medium block text-left" style={{
-                color: companyBranding?.text_color || '#FFFFFF'
-              }}>
+              <label
+                className="text-sm font-medium block text-left"
+                style={{
+                  color: companyBranding?.text_color || "#FFFFFF",
+                }}
+              >
                 Comparar con
               </label>
               <Select value={compareCompany} onValueChange={setCompareCompany}>
@@ -568,13 +608,16 @@ const Index = () => {
 
             {/* Tariff Type Selector */}
             <div className="space-y-2">
-              <label className="text-sm font-medium block text-left" style={{
-                color: companyBranding?.text_color || '#FFFFFF'
-              }}>
+              <label
+                className="text-sm font-medium block text-left"
+                style={{
+                  color: companyBranding?.text_color || "#FFFFFF",
+                }}
+              >
                 Tipo de tarifa
               </label>
-              <Select 
-                value={tariffType} 
+              <Select
+                value={tariffType}
                 onValueChange={(value: "electricity" | "gas" | "manual") => {
                   setTariffType(value);
                   if (value === "manual") {
@@ -613,7 +656,7 @@ const Index = () => {
             <Button
               size="lg"
               onClick={handlePdfClick}
-              style={{ backgroundColor: 'var(--brand-primary)' }}
+              style={{ backgroundColor: "var(--brand-primary)" }}
               className="w-full h-16 text-xl rounded-2xl text-white shadow-lg hover:opacity-90"
             >
               <Upload className="mr-3 h-6 w-6" />
@@ -623,7 +666,7 @@ const Index = () => {
             <Button
               size="lg"
               onClick={handleCameraClick}
-              style={{ backgroundColor: 'var(--brand-secondary)' }}
+              style={{ backgroundColor: "var(--brand-secondary)" }}
               className="w-full h-16 text-xl rounded-2xl text-gray-900 shadow-lg hover:opacity-90"
             >
               <Camera className="mr-3 h-6 w-6" />
@@ -631,19 +674,26 @@ const Index = () => {
             </Button>
           </div>
 
-          <p className="text-lg mt-8" style={{
-            color: companyBranding?.text_color ? `${companyBranding.text_color}CC` : 'rgba(255, 255, 255, 0.8)'
-          }}>
+          <p
+            className="text-lg mt-8"
+            style={{
+              color: companyBranding?.text_color
+                ? `${companyBranding.text_color}CC`
+                : "rgba(255, 255, 255, 0.8)",
+            }}
+          >
             Comparación rápida entre empresas de España
           </p>
 
           {/* Install App Link */}
           <div className="mt-6 text-center">
             <button
-              onClick={() => navigate('/install')}
+              onClick={() => navigate("/install")}
               className="text-sm font-medium underline hover:no-underline transition-all"
               style={{
-                color: companyBranding?.text_color ? `${companyBranding.text_color}99` : 'rgba(255, 255, 255, 0.6)'
+                color: companyBranding?.text_color
+                  ? `${companyBranding.text_color}99`
+                  : "rgba(255, 255, 255, 0.6)",
               }}
             >
               📱 ¿Cómo instalar la app en mi teléfono?
@@ -653,9 +703,13 @@ const Index = () => {
           <div className="mt-12 pt-8">
             <div className="flex flex-wrap justify-center items-center gap-6 opacity-70">
               {companies.map((company) => (
-                <div key={company} className="text-sm font-semibold" style={{
-                  color: companyBranding?.text_color || '#FFFFFF'
-                }}>
+                <div
+                  key={company}
+                  className="text-sm font-semibold"
+                  style={{
+                    color: companyBranding?.text_color || "#FFFFFF",
+                  }}
+                >
                   {company}
                 </div>
               ))}
@@ -668,25 +722,30 @@ const Index = () => {
 
       {/* PWA Install Prompt Dialog */}
       <Dialog open={showInstallPrompt} onOpenChange={setShowInstallPrompt}>
-        <DialogContent 
+        <DialogContent
           className="sm:max-w-md"
-          style={{ 
-            background: companyBranding?.background_color || '#003942',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
+          style={{
+            background: companyBranding?.background_color || "#003942",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
           }}
         >
           <DialogHeader>
-            <DialogTitle 
+            <DialogTitle
               className="text-xl font-bold"
-              style={{ color: companyBranding?.text_color || '#FFFFFF' }}
+              style={{ color: companyBranding?.text_color || "#FFFFFF" }}
             >
               Instalar aplicación
             </DialogTitle>
-            <DialogDescription 
+            <DialogDescription
               className="text-base"
-              style={{ color: companyBranding?.text_color ? `${companyBranding.text_color}CC` : 'rgba(255, 255, 255, 0.8)' }}
+              style={{
+                color: companyBranding?.text_color
+                  ? `${companyBranding.text_color}CC`
+                  : "rgba(255, 255, 255, 0.8)",
+              }}
             >
-              Instala esta app en tu dispositivo para un acceso más rápido y una mejor experiencia
+              Instala esta app en tu dispositivo para un acceso más rápido y una
+              mejor experiencia
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -695,8 +754,10 @@ const Index = () => {
               onClick={handleInstallDismiss}
               className="w-full sm:w-auto"
               style={{
-                borderColor: companyBranding?.text_color ? `${companyBranding.text_color}40` : 'rgba(255, 255, 255, 0.25)',
-                color: companyBranding?.text_color || '#FFFFFF'
+                borderColor: companyBranding?.text_color
+                  ? `${companyBranding.text_color}40`
+                  : "rgba(255, 255, 255, 0.25)",
+                color: companyBranding?.text_color || "#FFFFFF",
               }}
             >
               Ahora no
@@ -704,9 +765,9 @@ const Index = () => {
             <Button
               onClick={handleInstallClick}
               className="w-full sm:w-auto"
-              style={{ 
-                backgroundColor: companyBranding?.primary_color || '#0A8754',
-                color: '#FFFFFF'
+              style={{
+                backgroundColor: companyBranding?.primary_color || "#0A8754",
+                color: "#FFFFFF",
               }}
             >
               Instalar
@@ -716,8 +777,8 @@ const Index = () => {
       </Dialog>
 
       {/* Manual Invoice Form Dialog */}
-      <Dialog 
-        open={showManualForm} 
+      <Dialog
+        open={showManualForm}
         onOpenChange={(open) => {
           setShowManualForm(open);
           if (!open) {
@@ -731,7 +792,8 @@ const Index = () => {
               Ingresar valores de factura
             </DialogTitle>
             <DialogDescription>
-              Introduce los datos de tu factura eléctrica para compararla con {compareCompany || "la empresa seleccionada"}
+              Introduce los datos de tu factura eléctrica para compararla con{" "}
+              {compareCompany || "la empresa seleccionada"}
             </DialogDescription>
           </DialogHeader>
           <ManualInvoiceForm
