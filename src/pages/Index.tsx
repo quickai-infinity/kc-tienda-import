@@ -338,7 +338,7 @@ const Index = () => {
           ? `linear-gradient(to bottom, ${companyBranding.background_color}, ${companyBranding.background_color})`
           : "linear-gradient(to bottom, #003942, #002F36)",
       }}
-    > ...
+    > 
     <div className="flex-1 flex flex-col items-center justify-center" style={{
       paddingTop: 'max(env(safe-area-inset-top, 0px) + 4rem, 4rem)'
     }}>
@@ -352,10 +352,10 @@ const Index = () => {
             className="w-40 h-auto object-contain"
           />
         </div>
-        
+
         {/* Compare with selector */}
         <div className="space-y-4 mb-8">
-          ... 
+         
       {/* Hidden file inputs */}
       <input
         ref={fileInputRef}
